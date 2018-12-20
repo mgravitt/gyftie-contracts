@@ -3,13 +3,14 @@
 ACTION gyftietoken::setconfig (name token_gen) 
 {
     require_auth (get_self());
-    config _config;
-    _config.token_gen = token_gen;
-    _config.account_count = 0;
-    
-    config_singleton c_singleton (get_self(), get_self().value);
+        
+    config_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.begin();
+    eosio_assert (c_itr == c_t.end(), "Genesis token gen contract has already been set.");
 
-    c_singleton.set( _config, get_self());
+    c_t.emplace (get_self(), [&](auto &c) {
+        c.token_gen = token_gen;
+    });
 }
 
 ACTION gyftietoken::propose (name proposer,
@@ -17,6 +18,8 @@ ACTION gyftietoken::propose (name proposer,
                                 string notes) 
 {
     require_auth (proposer);
+    is_tokenholder (proposer);
+
     proposal_table p_t (get_self(), get_self().value);
 
     p_t.emplace (proposer, [&](auto &p) {
@@ -33,17 +36,48 @@ ACTION gyftietoken::vote (name voter,
                             uint64_t proposal_id) 
 {
     require_auth (voter);
-
+    is_tokenholder (voter);
+    
     proposal_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (proposal_id);
+    eosio_assert (now() <= p_itr->expiration_date, "Proposal has expired.");
 
     auto voter_itr = std::find (p_itr->voters.begin(), p_itr->voters.end(), voter);
     eosio_assert (voter_itr == p_itr->voters.end(), "User has already voted.");
 
-    p_t.modify (p_itr, eosio::same_payer, [&](auto &p) {
+    uint32_t votes = 0;
+
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
         p.votes_for++;
+        votes = p.votes_for;
         p.voters.push_back (voter);
     });
+
+    config_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.begin();
+    eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
+
+    if (votes > (c_itr->account_count / 2)) {
+        c_t.modify (c_itr, get_self(), [&](auto &c) {
+            c.token_gen = p_itr->new_token_gen;
+        });
+    }
+}
+
+ACTION gyftietoken::calcgyft (name from, name to) 
+{
+    require_auth (from);
+    is_tokenholder (from);
+
+    config_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.begin();
+    eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
+
+    action(
+        permission_level{get_self(), "active"_n},
+        c_itr->token_gen, "generate"_n,
+        std::make_tuple(get_self(), GYFTIE_SYM_STR, GYFTIE_PRECISION, from, to))
+    .send();
 }
 
 ACTION gyftietoken::gyft (name from, 
@@ -51,25 +85,41 @@ ACTION gyftietoken::gyft (name from,
                             string idhash,
                             string memo) 
 {
-    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-    
-    config_singleton c_singleton (get_self(), get_self().value);
-    auto c_s = c_singleton.get();
 
-    action(
-        permission_level{from, "active"_n},
-        c_s.token_gen, "generate"_n,
-        std::make_tuple(get_self(), GYFTIE_SYM_STR, GYFTIE_PRECISION, from, to))
+    require_auth (from);
+    is_tokenholder (to);
+
+    config_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.begin();
+    eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
+
+    tokengen_table t_t (c_itr->token_gen, c_itr->token_gen.value);
+    auto t_itr = t_t.begin();
+    eosio_assert (t_itr != t_t.end(), "Token generation amount not found.");
+    eosio_assert (t_itr->from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
+    eosio_assert (t_itr->to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
+
+    //print ("    Generated Amount:  ", t_itr->generated_amount, "\n");
+    
+    action (
+        permission_level{get_self(), "active"_n},
+        get_self(), "issue"_n,
+        std::make_tuple(from, t_itr->generated_amount, memo))
     .send();
 
-    tokengen_singleton t_singleton (get_self(), get_self().value);
-    auto t_s = t_singleton.get();
+    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
-    print (" Generated Amount:  ", t_s.generated_amount, "\n");
-    
-    issue (to, t_s.generated_amount, "Automatic Generation from Gyft");
+    // print ("    After inline action issue\n");
+    // print ("    sym.code()  :   ", sym.code(), "\n");
+    // print ("    from        :   ", from, "\n");
 
-    transfer (from, to, get_supply(get_self(), sym.code()), "Transfer via Gyft Event");
+    accounts a_t (get_self(), from.value);
+    auto a_itr = a_t.find (sym.code().raw());
+    eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
+
+    // print ("    Supply of From account:    ", a_itr->balance, "\n");
+
+    paytoken (get_self(), from, to, a_itr->balance, memo);
 }
 
 
@@ -104,7 +154,7 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
     eosio_assert(existing != statstable.end(), "token with symbol does not exist, create token before issue");
     const auto &st = *existing;
 
-    require_auth(get_self());
+    eosio_assert (has_auth (st.issuer) || has_auth (get_self()), "issue requires authority of issuer or token contract.");
     
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount > 0, "must issue positive quantity");
@@ -153,8 +203,18 @@ void gyftietoken::sub_balance(name owner, asset value)
     const auto &from = from_acnts.get(value.symbol.code().raw(), "no balance object found");
     eosio_assert(from.balance.amount >= value.amount, "overdrawn balance");
 
+    auto sym_name = value.symbol.code().raw();
+    stats statstable(_self, sym_name);
+    auto existing = statstable.find(sym_name);
+    eosio_assert(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+    const auto &st = *existing;
+
     from_acnts.modify(from, owner, [&](auto &a) {
         a.balance -= value;
+
+        if (a.balance.amount == 0 && st.issuer != owner){
+            decrement_account_count();
+        }
     });
 }
 
@@ -164,6 +224,7 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
     auto to = to_acnts.find(value.symbol.code().raw());
     if (to == to_acnts.end())
     {
+        increment_account_count ();
         to_acnts.emplace(ram_payer, [&](auto &a) {
             a.balance = value;
         });
@@ -176,4 +237,4 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
     }
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(create)(issue)(transfer)(gyft)(propose)(vote))
+EOSIO_DISPATCH(gyftietoken, (setconfig)(create)(issue)(transfer)(calcgyft)(gyft)(propose)(vote))

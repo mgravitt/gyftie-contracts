@@ -7,7 +7,7 @@
 using std::string;
 using namespace eosio;
 
-CONTRACT genesisgen : public contract
+CONTRACT secondgen : public contract
 {
     using contract::contract;
 

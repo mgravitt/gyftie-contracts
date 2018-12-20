@@ -3,3 +3,4 @@ project(Gyftie VERSION 1.0.0)
                                                                                                                                                                        
 add_subdirectory (gyftietoken)                                                                                                                                            
 add_subdirectory (genesisgen) 
+add_subdirectory (secondgen)

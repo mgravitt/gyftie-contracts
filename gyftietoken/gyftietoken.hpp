@@ -22,6 +22,8 @@ CONTRACT gyftietoken : public contract
     ACTION issue(name to, asset quantity, string memo);
 
     ACTION transfer(name from, name to, asset quantity, string memo);
+
+    ACTION calcgyft (name from, name to);
     
     ACTION gyft (name from, name to, string idhash, string memo);
 
@@ -50,11 +52,13 @@ CONTRACT gyftietoken : public contract
 
     TABLE config
     {
+        uint64_t    pk;
         name        token_gen;
-        uint32_t    account_count;        
+        uint32_t    account_count = 0;        
+        uint64_t    primary_key() const { return pk; }
     };
 
-    typedef singleton<"configs"_n, config> config_singleton;
+    typedef eosio::multi_index<"configs"_n, config> config_table;
 
     TABLE proposal 
     {
@@ -72,10 +76,14 @@ CONTRACT gyftietoken : public contract
 
     TABLE tokengen
     {
-        asset    generated_amount;        
+        uint64_t    pk;
+        name        from;
+        name        to;
+        asset       generated_amount;        
+        uint64_t    primary_key() const { return pk; }
     };
 
-    typedef singleton<"tokengens"_n, tokengen> tokengen_singleton;
+    typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table;
     
     TABLE account
     {
@@ -97,4 +105,59 @@ CONTRACT gyftietoken : public contract
 
     void sub_balance(name owner, asset value);
     void add_balance(name owner, asset value, name ram_payer);
+
+    void paytoken(  const name  token_contract,
+                    const name from,
+                    const name to,
+                    const asset token_amount,
+                    const string memo)
+    {
+        print("---------- Payment -----------\n");
+        print("Token Contract   : ", name{token_contract}, "\n");
+        print("From             : ", name{from}, "\n");
+        print("To               : ", name{to}, "\n");
+        print("Amount           : ", token_amount, "\n");
+        print("Memo             : ", memo, "\n");
+
+        action(
+            permission_level{from, "active"_n},
+            token_contract, "transfer"_n,
+            std::make_tuple(from, to, token_amount, memo))
+            .send();
+
+        print("---------- End Payment -------\n");
+    }
+
+    void is_tokenholder (name account) 
+    {
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        accounts a_t (get_self(), account.value);
+        auto a_itr = a_t.find (sym.code().raw());
+        eosio_assert (a_itr != a_t.end(), "Account does not have a GYFTIE balance.");
+
+        asset zero_balance = asset { 0, sym };
+        eosio_assert (a_itr->balance > zero_balance, "Account does not have a GYFTIE balance.");
+    }
+
+    void increment_account_count () 
+    {
+        config_table c_t (get_self(), get_self().value);
+        auto c_itr = c_t.begin();
+        eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
+
+        c_t.modify (c_itr, get_self(), [&](auto &c) {
+            c.account_count++;
+        });
+    }
+
+    void decrement_account_count () 
+    {
+        config_table c_t (get_self(), get_self().value);
+        auto c_itr = c_t.begin();
+        eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
+
+        c_t.modify (c_itr, get_self(), [&](auto &c) {
+            c.account_count--;
+        });
+    }
 };

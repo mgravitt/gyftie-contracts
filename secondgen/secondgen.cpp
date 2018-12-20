@@ -1,7 +1,7 @@
-#include "genesisgen.hpp"
+#include "secondgen.hpp"
 
 
-ACTION genesisgen::generate (name token_contract,
+ACTION secondgen::generate (name token_contract,
                             string symbol_string,
                             uint8_t    symbol_precision,
                             name from,
@@ -22,8 +22,8 @@ ACTION genesisgen::generate (name token_contract,
         t.pk                = t_t.available_primary_key();
         t.from              = from;
         t.to                = to;
-        t.generated_amount  = asset { 11111, sym };
+        t.generated_amount  = asset { 22222, sym };
     });
 }
 
-EOSIO_DISPATCH(genesisgen, (generate))
+EOSIO_DISPATCH(secondgen, (generate))
