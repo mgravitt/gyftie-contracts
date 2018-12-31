@@ -17,12 +17,16 @@ ACTION secondgen::generate (name token_contract,
 
     symbol sym = symbol{symbol_code(symbol_string.c_str()), symbol_precision};
 
+    accounts a_t (get_self(), from.value);
+    auto a_itr = a_t.find (sym.code().raw());
+    eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
+
     print ("    Writing generated token record.\n");
     t_t.emplace (get_self(), [&](auto &t) {
         t.pk                = t_t.available_primary_key();
         t.from              = from;
         t.to                = to;
-        t.generated_amount  = asset { 22222, sym };
+        t.generated_amount  = a_itr->balance * 3;
     });
 }
 
