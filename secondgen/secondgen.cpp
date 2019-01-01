@@ -17,7 +17,7 @@ ACTION secondgen::generate (name token_contract,
 
     symbol sym = symbol{symbol_code(symbol_string.c_str()), symbol_precision};
 
-    accounts a_t (get_self(), from.value);
+    accounts a_t (token_contract, from.value);
     auto a_itr = a_t.find (sym.code().raw());
     eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
 

@@ -17,7 +17,7 @@ cleos set contract secondgen secondgen/
 
 cleos push action gyftietoken setconfig '["genesisgen"]' -p gyftietoken
 cleos push action gyftietoken create '["issuer"]' -p gyftietoken
-cleos push action gyftietoken issue '["holder1", "100.0000 GYFTIE", "memo"]' -p issuer
+cleos push action gyftietoken issue '["holder1", "15.0000 GYFTIE", "memo"]' -p issuer
 
 cleos push action gyftietoken calcgyft '["holder1", "holder2"]' -p holder1
 cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345", "memo"]' -p holder1

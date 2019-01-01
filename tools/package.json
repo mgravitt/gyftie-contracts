@@ -1,0 +1,17 @@
+{
+  "name": "tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "eosjs": "20.0.0-beta2",
+    "node-fetch": "^2.3.0",
+    "text-encoding": "^0.7.0",
+    "util": "^0.11.1"
+  }
+}

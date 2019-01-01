@@ -31,6 +31,12 @@ CONTRACT gyftietoken : public contract
 
     ACTION vote (name voter, uint64_t   proposal_id);
 
+    // TESTING ONLY -- DELETE FOR PRODUCTION
+    ACTION reset () ;
+
+    // TESTING ONLY -- DELETE FOR PRODUCTION
+    ACTION burnall (name tokenholder);
+
     static asset get_supply(name gyftietoken_contract_account, symbol_code sym)
     {
         stats statstable(gyftietoken_contract_account, sym.raw());
@@ -47,7 +53,7 @@ CONTRACT gyftietoken : public contract
 
   private:
 
-    const string    GYFTIE_SYM_STR  = "GYFTIE";
+    const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 4;
 
     TABLE config
@@ -66,6 +72,7 @@ CONTRACT gyftietoken : public contract
         uint32_t        created_date;
         name            proposer;
         name            new_token_gen;
+        string          notes;
         vector<name>    voters;
         uint32_t        votes_for;
         uint32_t        expiration_date;

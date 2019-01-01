@@ -13,6 +13,42 @@ ACTION gyftietoken::setconfig (name token_gen)
     });
 }
 
+// TESTING ONLY -- DELETE FOR PRODUCTION
+ACTION gyftietoken::reset () 
+{
+    require_auth (get_self());
+
+    config_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.begin();
+    while (c_itr != c_t.end()) {
+        c_itr = c_t.erase (c_itr);
+    }
+
+    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+    stats s_t(_self, sym.code().raw());
+    auto s_itr = s_t.find(sym.code().raw());
+    s_t.erase (s_itr);
+
+    proposal_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.begin();
+    while (p_itr != p_t.end()) {
+        p_itr = p_t.erase (p_itr);
+    }
+}
+
+// TESTING ONLY -- DELETE FOR PRODUCTION
+ACTION gyftietoken::burnall (name tokenholder) 
+{
+    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+    accounts a_t (get_self(), tokenholder.value);
+    auto a_itr = a_t.find (sym.code().raw());
+    eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
+
+    a_t.erase (a_itr);
+}
+
 ACTION gyftietoken::propose (name proposer,
                                 name token_gen,
                                 string notes) 
@@ -27,6 +63,7 @@ ACTION gyftietoken::propose (name proposer,
         p.created_date  = now();
         p.proposer      = proposer;
         p.new_token_gen = token_gen;
+        p.notes         = notes;
         p.votes_for     = 0;
         p.expiration_date   = now() + (60 * 60);  // 1 hour
     });
@@ -87,7 +124,7 @@ ACTION gyftietoken::gyft (name from,
 {
 
     require_auth (from);
-    is_tokenholder (to);
+    is_tokenholder (from);
 
     config_table c_t (get_self(), get_self().value);
     auto c_itr = c_t.begin();
@@ -160,7 +197,8 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
     eosio_assert(quantity.amount > 0, "must issue positive quantity");
     eosio_assert(quantity.symbol == st.symbol, "symbol precision mismatch");
 
-    statstable.modify(st, eosio::same_payer, [&](auto &s) {
+    //statstable.modify(st, eosio::same_payer, [&](auto &s) {
+    statstable.modify(st, st.issuer, [&](auto &s) {
         s.supply += quantity;
     });
 
@@ -237,4 +275,4 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
     }
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(create)(issue)(transfer)(calcgyft)(gyft)(propose)(vote))
+EOSIO_DISPATCH(gyftietoken, (setconfig)(create)(issue)(transfer)(calcgyft)(gyft)(propose)(vote)(reset)(burnall))
