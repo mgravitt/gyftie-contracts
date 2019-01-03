@@ -37,34 +37,19 @@ CONTRACT gyftietoken : public contract
     // TESTING ONLY -- DELETE FOR PRODUCTION
     ACTION burnall (name tokenholder);
 
-    static asset get_supply(name gyftietoken_contract_account, symbol_code sym)
-    {
-        stats statstable(gyftietoken_contract_account, sym.raw());
-        const auto &st = statstable.get(sym.raw());
-        return st.supply;
-    }
-
-    static asset get_balance(name gyftietoken_contract_account, name owner, symbol_code sym)
-    {
-        accounts accountstable(gyftietoken_contract_account, owner.value);
-        const auto &ac = accountstable.get(sym.raw());
-        return ac.balance;
-    }
-
   private:
 
     const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 4;
 
-    TABLE config
+    TABLE Config
     {
-        uint64_t    pk;
         name        token_gen;
         uint32_t    account_count = 0;        
-        uint64_t    primary_key() const { return pk; }
     };
 
-    typedef eosio::multi_index<"configs"_n, config> config_table;
+    typedef singleton<"configs"_n, Config> config_table;
+    typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
 
     TABLE proposal 
     {
@@ -148,23 +133,17 @@ CONTRACT gyftietoken : public contract
 
     void increment_account_count () 
     {
-        config_table c_t (get_self(), get_self().value);
-        auto c_itr = c_t.begin();
-        eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
-
-        c_t.modify (c_itr, get_self(), [&](auto &c) {
-            c.account_count++;
-        });
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        c.account_count++;
+        config.set (c, get_self());
     }
 
     void decrement_account_count () 
     {
-        config_table c_t (get_self(), get_self().value);
-        auto c_itr = c_t.begin();
-        eosio_assert (c_itr != c_t.end(), "Configuration has not been set.");
-
-        c_t.modify (c_itr, get_self(), [&](auto &c) {
-            c.account_count--;
-        });
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        c.account_count--;
+        config.set (c, get_self());
     }
 };
