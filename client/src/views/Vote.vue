@@ -1,7 +1,7 @@
 <template>
    
 <div>
-    <h2>Transfer Tokens</h2>
+    <h2>Vote</h2>
     <v-flex >
        <v-form v-model="valid">
           <v-text-field
