@@ -1,6 +1,17 @@
 #include "genesisgen.hpp"
 #include <math.h>
 
+ACTION genesisgen::reset () 
+{
+    require_auth (get_self());
+    
+    tokengen_table t_t (get_self(), get_self().value);
+    auto t_itr = t_t.begin();
+    if (t_itr != t_t.end()) {
+        t_t.erase (t_itr);
+    }
+}
+
 ACTION genesisgen::generate (name token_contract,
                             string symbol_string,
                             uint8_t    symbol_precision,
@@ -58,4 +69,4 @@ ACTION genesisgen::generate (name token_contract,
     });
 }
 
-EOSIO_DISPATCH(genesisgen, (generate))
+EOSIO_DISPATCH(genesisgen, (generate)(reset))

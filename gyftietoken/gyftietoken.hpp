@@ -17,7 +17,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION setconfig (name token_gen);
 
-    ACTION create(name issuer);
+    ACTION create();
 
     ACTION issue(name to, asset quantity, string memo);
 
@@ -25,7 +25,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION calcgyft (name from, name to);
     
-    ACTION gyft (name from, name to, string idhash, string memo);
+    ACTION gyft (name from, name to, string idhash);
 
     ACTION propose (name proposer, name token_gen, string notes);
 
@@ -145,5 +145,24 @@ CONTRACT gyftietoken : public contract
         auto c = config.get();
         c.account_count--;
         config.set (c, get_self());
+    }
+
+    void save_idhash (const name account, const string idhash) 
+    {
+        accounts a_t (get_self(), account.value);
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        auto a_itr = a_t.find (sym.code().raw());
+        
+        if (a_itr == a_t.end()) {
+            asset zero_balance = asset { 0, sym };
+            a_t.emplace (get_self(), [&](auto &a) {
+                a.balance = zero_balance;
+                a.idhash = idhash;
+            });
+        } else {
+            a_t.modify (a_itr, get_self(), [&](auto &a) {
+                a.idhash = idhash;
+            });
+        }
     }
 };

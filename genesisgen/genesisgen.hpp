@@ -19,6 +19,8 @@ CONTRACT genesisgen : public contract
                      name from,
                      name to);
 
+    ACTION reset ();
+    
   private:
 
     

@@ -109,8 +109,7 @@ ACTION gyftietoken::calcgyft (name from, name to)
 
 ACTION gyftietoken::gyft (name from, 
                             name to, 
-                            string idhash,
-                            string memo) 
+                            string idhash) 
 {
     require_auth (from);
     is_tokenholder (from);
@@ -124,10 +123,11 @@ ACTION gyftietoken::gyft (name from,
     eosio_assert (t_itr->from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
     eosio_assert (t_itr->to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
    
+    string tg { "To Gyfter" };
     action (
         permission_level{get_self(), "active"_n},
         get_self(), "issue"_n,
-        std::make_tuple(from, t_itr->generated_amount, memo))
+        std::make_tuple(from, t_itr->generated_amount, tg))
     .send();
 
     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
@@ -136,26 +136,29 @@ ACTION gyftietoken::gyft (name from,
     auto a_itr = a_t.find (sym.code().raw());
     eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
 
-    paytoken (get_self(), from, to, a_itr->balance, memo);
+    save_idhash (to, idhash);
+
+    string s { "Gyft" };
+    paytoken (get_self(), from, to, a_itr->balance, s);
 }
 
 
-ACTION gyftietoken::create(name issuer)
+ACTION gyftietoken::create()
 {
-    require_auth(_self);
+    require_auth(get_self());
 
     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
     eosio_assert(sym.is_valid(), "invalid symbol name");
 
-    stats statstable(_self, sym.code().raw());
+    stats statstable(get_self(), sym.code().raw());
     auto existing = statstable.find(sym.code().raw());
     eosio_assert(existing == statstable.end(), "token with symbol already exists");
 
-    statstable.emplace(_self, [&](auto &s) {
+    statstable.emplace(get_self(), [&](auto &s) {
         s.symbol = sym;
         s.supply.symbol = sym;
-        s.issuer = issuer;
+        s.issuer = get_self();
     });
 }
 
