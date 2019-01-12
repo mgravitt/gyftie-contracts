@@ -11,8 +11,8 @@
           ></v-text-field>
           
           <v-text-field
-            v-model="idhash"
-            label="ID Hash"
+            v-model="idfield"
+            label="ID Number"
             required
           ></v-text-field>
 
@@ -48,13 +48,29 @@
 
   ScatterJS.plugins( new ScatterEOS() )
 
+  async function sha256(message) {
+    const msgUint8 = new TextEncoder('utf-8').encode(message);                      // encode as UTF-8
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);             // hash the message
+    const hashArray = Array.from(new Uint8Array(hashBuffer));                       // convert hash to byte array
+    const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join(''); // convert bytes to hex string
+    return hashHex;
+  }
+
   const network = Network.fromJson({
     blockchain:'eos',
-    host:'jungle.eosio.cr',
+    host:'eos.greymass.com',
     port:443,
     protocol:'https',
-    chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
+    chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906' 
   })
+
+  // const network = Network.fromJson({
+  //   blockchain:'eos',
+  //   host:'jungle.eosio.cr',
+  //   port:443,
+  //   protocol:'https',
+  //   chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
+  // })
 
   let eos
   const rpc = new JsonRpc(network.fullhost())
@@ -65,9 +81,9 @@
         sending:false,
         scatter:null,
         result:null,
-        to: "gyftieuser12",
-        idhash: "lskdfjsdolfijhsdfjosd",
-        memo: "gyft memo"
+        to: "",
+        idfield: "",
+        memo: ""
       }
     },
 
@@ -135,7 +151,7 @@
               data: {
                 from: this.account.name,
                 to: this.to,
-                idhash: this.idhash,
+                idhash: await sha256(this.idfield),
                 memo: this.memo
               },
             }

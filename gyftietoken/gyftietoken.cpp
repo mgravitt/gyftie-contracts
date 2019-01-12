@@ -58,7 +58,7 @@ ACTION gyftietoken::propose (name proposer,
         p.new_token_gen = token_gen;
         p.notes         = notes;
         p.votes_for     = 0;
-        p.expiration_date   = now() + (60 * 60);  // 1 hour
+        p.expiration_date   = now() + (60 * 60 * 24 * 30);  // 30 days
     });
 }
 

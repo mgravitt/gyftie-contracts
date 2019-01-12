@@ -50,11 +50,19 @@
 
   const network = Network.fromJson({
     blockchain:'eos',
-    host:'jungle2.cryptolions.io',
-    port:80,
-    protocol:'http',
-    chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
+    host:'eos.greymass.com',
+    port:443,
+    protocol:'https',
+    chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906' 
   })
+
+  // const network = Network.fromJson({
+  //   blockchain:'eos',
+  //   host:'jungle.eosio.cr',
+  //   port:443,
+  //   protocol:'https',
+  //   chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
+  // })
 
   let eos
   const rpc = new JsonRpc(network.fullhost())
@@ -65,9 +73,9 @@
         sending:false,
         scatter:null,
         result:null,
-        to: "gyftieuser11",
-        quantity: "100.00 GFT",
-        memo: "issue of GFT tokens"
+        to: "",
+        quantity: "",
+        memo: ""
       }
     },
 

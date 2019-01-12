@@ -1,29 +1,22 @@
 <template>
 <div>
-    <h2>Balances</h2>
+    <h2>Balance</h2>
 
-    <h3>gyftieuser11</h3>
-    <ul>
-        <li v-for="balance in this.gyfuser11bal" :key="balance">{{balance.balance}} </li>
-    </ul>
+     <section v-if="scatter && account">
+         <h3>{{account.name}}</h3>
 
-    <h3>gyftieuser12</h3>
-    <ul>
-        <li v-for="balance in this.gyfuser12bal" :key="balance">{{balance.balance}} </li>
-    </ul>
+        <ul>
+            <li v-for="balance in this.balances" :key="balance">{{balance.balance}} </li>
+        </ul>
 
-    <h3>gyftieuser13</h3>
-    <ul>
-        <li v-for="balance in this.gyfuser13bal" :key="balance">{{balance.balance}} </li>
-    </ul>
-
+         Logged in with: {{account.name}}
+          <v-btn @click="logout">Logout</v-btn>
+     </section>    
+    
     <br/><br/>
 
      <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>
-     <section v-if="scatter && account">
-          Logged in with: {{account.name}}
-          <v-btn @click="logout">Logout</v-btn>
-     </section>
+     
 </div>
 </template>
 
@@ -33,6 +26,14 @@
   import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
 
   ScatterJS.plugins( new ScatterEOS() )
+
+  // const network = Network.fromJson({
+  //   blockchain:'eos',
+  //   host:'eos.greymass.com',
+  //   port:443,
+  //   protocol:'https',
+  //   chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906' 
+  // })
 
   const network = Network.fromJson({
     blockchain:'eos',
@@ -51,9 +52,7 @@
         sending:false,
         scatter:null,
         result:null,
-        gyfuser11bal: [],
-        gyfuser12bal: [],
-        gyfuser13bal: []
+        balances: []
       }
     },
 
@@ -66,40 +65,18 @@
           return
         }
         this.scatter = ScatterJS.scatter
+      
+        rpc.get_table_rows({
+                "json": true,
+                "code": "gyftietoken1",   // contract who owns the table
+                "scope": this.scatter.identity.accounts[0].name,  // scope of the table
+                "table": "accounts",    // name of the table as specified by the contract abi
+                "limit": 100,
+            }).then( result => {
+                console.log (result.rows);
+                this.balances = result.rows;
+            });
       })
-    
-        rpc.get_table_rows({
-            "json": true,
-            "code": "gyftietoken1",   // contract who owns the table
-            "scope": "gyftieuser11",//this.scatter.identity.accounts[0],  // scope of the table
-            "table": "accounts",    // name of the table as specified by the contract abi
-            "limit": 100,
-        }).then( result => {
-            console.log (result.rows);
-            this.gyfuser11bal = result.rows;
-        });
-
-        rpc.get_table_rows({
-            "json": true,
-            "code": "gyftietoken1",   // contract who owns the table
-            "scope": "gyftieuser12",//this.scatter.identity.accounts[0],  // scope of the table
-            "table": "accounts",    // name of the table as specified by the contract abi
-            "limit": 100,
-        }).then( result => {
-            console.log (result.rows);
-            this.gyfuser12bal = result.rows;
-        });
-
-        rpc.get_table_rows({
-            "json": true,
-            "code": "gyftietoken1",   // contract who owns the table
-            "scope": "gyftieuser13",//this.scatter.identity.accounts[0],  // scope of the table
-            "table": "accounts",    // name of the table as specified by the contract abi
-            "limit": 100,
-        }).then( result => {
-            console.log (result.rows);
-            this.gyfuser13bal = result.rows;
-        });
     },
 
     computed:{
@@ -113,6 +90,7 @@
     methods: {
       login(){
         this.scatter.getIdentity({accounts:[network]})
+        mounted()
       },
       logout(){
         this.scatter.forgetIdentity()
