@@ -6,22 +6,16 @@
        <v-form v-model="valid">
           <v-text-field
             v-model="to"
-            label="To"
+            label="Gyftie Account Name"
             required
           ></v-text-field>
           
           <v-text-field
             v-model="idfield"
-            label="ID Number"
+            label="Government Issued ID Number"
             required
           ></v-text-field>
 
-          
-          <v-text-field
-            v-model="memo"
-            label="Memo"
-            required
-          ></v-text-field>
        </v-form>
     </v-flex>
     
@@ -82,8 +76,7 @@
         scatter:null,
         result:null,
         to: "",
-        idfield: "",
-        memo: ""
+        idfield: ""
       }
     },
 
@@ -127,10 +120,9 @@
         }
 
         try {
-          console.log (this.account.authority);
           const result = await eos.transact({
             actions: [{
-              account: 'gyftietoken1',
+              account: 'gyftietokens',
               name: 'calcgyft',
               authorization: [{
                 actor: this.account.name,
@@ -142,7 +134,7 @@
               },
             }
             ,{
-              account: 'gyftietoken1',
+              account: 'gyftietokens',
               name: 'gyft',
               authorization: [{
                 actor: this.account.name,
@@ -151,8 +143,7 @@
               data: {
                 from: this.account.name,
                 to: this.to,
-                idhash: await sha256(this.idfield),
-                memo: this.memo
+                idhash: await sha256(this.idfield)
               },
             }
             ]
