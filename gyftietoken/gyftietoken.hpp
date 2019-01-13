@@ -40,7 +40,7 @@ CONTRACT gyftietoken : public contract
   private:
 
     const string    GYFTIE_SYM_STR  = "GFT";
-    const uint8_t   GYFTIE_PRECISION = 4;
+    const uint8_t   GYFTIE_PRECISION = 8;
 
     TABLE Config
     {

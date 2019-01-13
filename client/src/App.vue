@@ -15,7 +15,7 @@
             <v-list-tile-title>View Balance</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
-
+<!-- 
         <v-list-tile :to= "{ name: 'issue'}" @click="">
           <v-list-tile-action>
             <v-icon>flash_on</v-icon>
@@ -23,7 +23,7 @@
           <v-list-tile-content>
             <v-list-tile-title>Issue</v-list-tile-title>
           </v-list-tile-content>
-        </v-list-tile>
+        </v-list-tile> -->
 
         <v-list-tile :to= "{ name: 'transfer'}" @click="">
           <v-list-tile-action>
@@ -43,7 +43,7 @@
           </v-list-tile-content>
         </v-list-tile>
 
-
+<!-- 
          <v-list-tile :to= "{ name: 'propose'}" @click="">
           <v-list-tile-action>
             <v-icon>edit</v-icon>
@@ -70,7 +70,7 @@
           <v-list-tile-content>
             <v-list-tile-title>Vote</v-list-tile-title>
           </v-list-tile-content>
-        </v-list-tile>
+        </v-list-tile> -->
 
 
       </v-list>
