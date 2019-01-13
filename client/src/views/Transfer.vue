@@ -121,7 +121,7 @@
         try {
           const result = await eos.transact({
             actions: [{
-              account: 'gyftietoken1',
+              account: 'gyftietokens',
               name: 'transfer',
               authorization: [{
                 actor: this.account.name,
