@@ -1,10 +1,9 @@
 <template>
   <div>
     <img src="../../public/Gyftie-Logo.png" height="150">
-    <h2>Balance:</h2>
+    <h2>Balance: {{gftbalance}} GFT</h2>
 
     <section v-if="scatter && account">
-      <div>{{gftbalance}} GFT</div>
       Logged in with: {{account.name}}
       <v-btn @click="logout">Logout</v-btn>
     </section>
@@ -48,7 +47,7 @@ export default {
       scatter: null,
       result: null,
       gftbalance: "",
-      gftbalstr: "1.00000000 GFT"
+      gftbalstr: "1.50000000 GFT"
     };
   },
 
@@ -74,16 +73,34 @@ export default {
           if (result.rows.length == 0) {
             this.gftbalance = "0.00";
           } else {
-            this.gftbalance = Math.round(
+           // console.log ("result.rows balance: ", result.rows[0].balance);
+
+            this.gftbalance = parseFloat(Math.round(
               parseFloat(
                 result.rows[0].balance.substring(
                   0,
                   result.rows[0].balance.length - 4
-                ) * 100
-              ) / 100
+                ) 
+              ) * 100  
+            ) / 100
             ).toFixed(2);
+
+
+            // console.log ("gftbalstr ", this.gftbalstr);
+            // this.gftbalance = parseFloat(Math.round(
+            //   parseFloat(
+            //     this.gftbalstr.substring(
+            //       0,
+            //       this.gftbalstr.length - 4
+            //     ) 
+            //   ) * 100
+            // ) / 100)
+            // .toFixed(2);
+
+            
+            //console.log ("gftbalance: ", this.gftbalance);
           }
-          console.log(this.gftbalance);
+          //console.log(this.gftbalance);
         });
     });
   },
