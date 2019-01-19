@@ -47,7 +47,7 @@ ACTION gyftietoken::propose (name proposer,
                                 string notes) 
 {
     require_auth (proposer);
-    is_tokenholder (proposer);
+    eosio_assert (is_tokenholder (proposer), "Proposer is not a GFT token holder.");
 
     proposal_table p_t (get_self(), get_self().value);
 
@@ -66,7 +66,7 @@ ACTION gyftietoken::vote (name voter,
                             uint64_t proposal_id) 
 {
     require_auth (voter);
-    is_tokenholder (voter);
+    eosio_assert (is_tokenholder (voter), "Voter is not a GFT token holder.");
     
     proposal_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (proposal_id);
@@ -95,7 +95,7 @@ ACTION gyftietoken::vote (name voter,
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
     require_auth (from);
-    is_tokenholder (from);
+    eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -112,7 +112,8 @@ ACTION gyftietoken::gyft (name from,
                             string idhash) 
 {
     require_auth (from);
-    is_tokenholder (from);
+    eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
+    eosio_assert (!is_tokenholder(to), "Receipient must not be a GFT token holder.");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -198,6 +199,8 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert(from != to, "cannot transfer to self");
     require_auth(from);
     eosio_assert(is_account(to), "to account does not exist");
+    eosio_assert (is_tokenholder (to), "Receipient is not a GFT token holder. Must Gyft first.");
+
     auto sym = quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);

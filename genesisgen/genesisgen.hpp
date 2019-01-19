@@ -13,6 +13,9 @@ CONTRACT genesisgen : public contract
 
   public:
 
+    ACTION setconfig (const asset gft_eos_rate,
+                        const float gyfter_payback_rate);
+
     ACTION generate (name token_contract,
                      string symbol_string,
                      uint8_t    symbol_precision,
@@ -22,6 +25,15 @@ CONTRACT genesisgen : public contract
     ACTION reset ();
     
   private:
+
+    TABLE Config
+    {
+        asset       gft_eos_rate;
+        float       gyfter_payback_rate;      
+    };
+
+    typedef singleton<"configs"_n, Config> config_table;
+    typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
 
     
     TABLE tokengen

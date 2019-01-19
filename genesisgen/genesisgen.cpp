@@ -12,6 +12,18 @@ ACTION genesisgen::reset ()
     }
 }
 
+ACTION genesisgen::setconfig (const asset gft_eos_rate,
+                                const float gyfter_payback_rate)
+{
+    require_auth (get_self());
+        
+    config_table config (get_self(), get_self().value);
+    Config c;
+    c.gft_eos_rate = gft_eos_rate;
+    c.gyfter_payback_rate = gyfter_payback_rate;
+    config.set (c, get_self());
+}
+
 ACTION genesisgen::generate (name token_contract,
                             string symbol_string,
                             uint8_t    symbol_precision,
@@ -35,32 +47,36 @@ ACTION genesisgen::generate (name token_contract,
         t.from              = from;
         t.to                = to;
 
-        asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
-        print ("    One gyftie token:   ", one_gyftie_token, "\n");
+       // asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
+        // print ("    One gyftie token:   ", one_gyftie_token, "\n");
 
         print ("    Gyfter balance:     ", a_itr->balance, "\n");
 
-        eosio_assert (a_itr->balance < (one_gyftie_token * 1000000), "Gyft feature is disabled for balances of 1,000,000.");
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
 
-        double gyft_benefit=0;
-        if (a_itr->balance  < (one_gyftie_token * 10)) {
-            gyft_benefit = 1.5;
-        } else if (a_itr->balance  < (one_gyftie_token * 100)) {
-            gyft_benefit = 1.4;
-        } else if (a_itr->balance  < (one_gyftie_token * 1000)) {
-            gyft_benefit = 1.3;
-        } else if (a_itr->balance  < (one_gyftie_token * 10000)) {
-            gyft_benefit = 1.2;
-        } else if (a_itr->balance  < (one_gyftie_token * 100000)) {
-            gyft_benefit = 1.1;
-        } else if (a_itr->balance  < (one_gyftie_token * 1000000)) {
-            gyft_benefit = 1.05;
-        } 
+        //eosio_assert (a_itr->balance < (one_gyftie_token * 1000000), "Gyft feature is disabled for balances of 1,000,000.");
 
-        print ("    Gyft benefit    :   ", std::to_string(gyft_benefit).c_str(), "\n");
+        //double gyft_benefit= 1.5;
+
+        // if (a_itr->balance  < (one_gyftie_token * 10)) {
+        //     gyft_benefit = 1.5;
+        // } else if (a_itr->balance  < (one_gyftie_token * 100)) {
+        //     gyft_benefit = 1.4;
+        // } else if (a_itr->balance  < (one_gyftie_token * 1000)) {
+        //     gyft_benefit = 1.3;
+        // } else if (a_itr->balance  < (one_gyftie_token * 10000)) {
+        //     gyft_benefit = 1.2;
+        // } else if (a_itr->balance  < (one_gyftie_token * 100000)) {
+        //     gyft_benefit = 1.1;
+        // } else if (a_itr->balance  < (one_gyftie_token * 1000000)) {
+        //     gyft_benefit = 1.05;
+        // } 
+
+        print ("    Gyft benefit    :   ", std::to_string(c.gyfter_payback_rate).c_str(), "\n");
         print ("    Balance amount  :   ", std::to_string(a_itr->balance.amount).c_str(), "\n");
 
-        int64_t    gyft_amount = static_cast<int64_t>(a_itr->balance.amount * gyft_benefit);
+        int64_t    gyft_amount = static_cast<int64_t>(a_itr->balance.amount * c.gyfter_payback_rate);
         print ("    Gyft amount     :   ", std::to_string(gyft_amount).c_str(), "\n");
 
         t.generated_amount  = asset { gyft_amount, sym } ;
@@ -69,4 +85,4 @@ ACTION genesisgen::generate (name token_contract,
     });
 }
 
-EOSIO_DISPATCH(genesisgen, (generate)(reset))
+EOSIO_DISPATCH(genesisgen, (generate)(setconfig)(reset))

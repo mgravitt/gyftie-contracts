@@ -120,15 +120,21 @@ CONTRACT gyftietoken : public contract
         print("---------- End Payment -------\n");
     }
 
-    void is_tokenholder (name account) 
+    bool is_tokenholder (name account) 
     {
         symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
         accounts a_t (get_self(), account.value);
         auto a_itr = a_t.find (sym.code().raw());
-        eosio_assert (a_itr != a_t.end(), "Account does not have a GYFTIE balance.");
+        if (a_itr == a_t.end()) {
+            return false;
+        }
 
         asset zero_balance = asset { 0, sym };
-        eosio_assert (a_itr->balance > zero_balance, "Account does not have a GYFTIE balance.");
+        if (a_itr->balance <= zero_balance) {
+            return false;
+        }
+        
+        return true;
     }
 
     void increment_account_count () 
