@@ -123,6 +123,7 @@ CONTRACT gyftietoken : public contract
     bool is_tokenholder (name account) 
     {
         symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    
         accounts a_t (get_self(), account.value);
         auto a_itr = a_t.find (sym.code().raw());
         if (a_itr == a_t.end()) {
@@ -134,6 +135,17 @@ CONTRACT gyftietoken : public contract
             return false;
         }
         
+        return true;
+    }
+
+    bool is_gyftie_account (name account) 
+    {
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        accounts a_t (get_self(), account.value);
+        auto a_itr = a_t.find (sym.code().raw());
+        if (a_itr == a_t.end()) {
+            return false;
+        }
         return true;
     }
 

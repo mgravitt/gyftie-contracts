@@ -113,7 +113,9 @@ ACTION gyftietoken::gyft (name from,
 {
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
-    eosio_assert (!is_tokenholder(to), "Receipient must not be a GFT token holder.");
+    eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
+
+    save_idhash (to, idhash);
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -137,8 +139,6 @@ ACTION gyftietoken::gyft (name from,
     auto a_itr = a_t.find (sym.code().raw());
     eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
 
-    save_idhash (to, idhash);
-
     string s { "Gyft" };
     paytoken (get_self(), from, to, a_itr->balance, s);
 }
@@ -161,6 +161,8 @@ ACTION gyftietoken::create()
         s.supply.symbol = sym;
         s.issuer = get_self();
     });
+
+    save_idhash (get_self(), "ISSUER-HASH-PLACEHOLDER");
 }
 
 ACTION gyftietoken::issue(name to, asset quantity, string memo)
@@ -199,7 +201,7 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert(from != to, "cannot transfer to self");
     require_auth(from);
     eosio_assert(is_account(to), "to account does not exist");
-    eosio_assert (is_tokenholder (to), "Receipient is not a GFT token holder. Must Gyft first.");
+    eosio_assert(is_gyftie_account(to), "Recipient is not a Gyftie account. Must Gyft first.");
 
     auto sym = quantity.symbol.code().raw();
     stats statstable(_self, sym);
