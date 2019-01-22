@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>    // std::find
 #include <eosiolib/singleton.hpp>
+#include <math.h>
 
 using std::string;
 using std::vector;
@@ -15,7 +16,9 @@ CONTRACT gyftietoken : public contract
 
   public:
 
-    ACTION setconfig (name token_gen);
+    ACTION setconfig (name token_gen, name gftorderbook);
+
+    ACTION delconfig ();
 
     ACTION create();
 
@@ -27,15 +30,20 @@ CONTRACT gyftietoken : public contract
     
     ACTION gyft (name from, name to, string idhash);
 
-    ACTION propose (name proposer, name token_gen, string notes);
+    //ACTION propose (name proposer, name token_gen, string notes);
+    ACTION propose (name proposer, string notes);
 
-    ACTION vote (name voter, uint64_t   proposal_id);
+    ACTION votefor (name voter, uint64_t   proposal_id);
+
+    ACTION voteagainst (name voter, uint64_t   proposal_id);
 
     // TESTING ONLY -- DELETE FOR PRODUCTION
     ACTION reset () ;
 
     // TESTING ONLY -- DELETE FOR PRODUCTION
     ACTION burnall (name tokenholder);
+
+    ACTION removeprop (uint64_t proposal_id);
 
   private:
 
@@ -46,6 +54,7 @@ CONTRACT gyftietoken : public contract
     {
         name        token_gen;
         uint32_t    account_count = 0;        
+        name        gftorderbook;
     };
 
     typedef singleton<"configs"_n, Config> config_table;
@@ -58,8 +67,10 @@ CONTRACT gyftietoken : public contract
         name            proposer;
         name            new_token_gen;
         string          notes;
-        vector<name>    voters;
+        vector<name>    voters_for;
         uint32_t        votes_for;
+        vector<name>    voters_against;
+        uint32_t        votes_against;
         uint32_t        expiration_date;
         uint64_t        primary_key() const { return proposal_id; }
     };
@@ -133,9 +144,13 @@ CONTRACT gyftietoken : public contract
         asset zero_balance = asset { 0, sym };
         if (a_itr->balance <= zero_balance) {
             return false;
-        }
-        
+        }        
         return true;
+    }
+
+    bool is_paused () 
+    {
+        return false;
     }
 
     bool is_gyftie_account (name account) 
@@ -183,4 +198,6 @@ CONTRACT gyftietoken : public contract
             });
         }
     }
+
+
 };

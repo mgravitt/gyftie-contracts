@@ -10,6 +10,9 @@ ACTION genesisgen::reset ()
     if (t_itr != t_t.end()) {
         t_t.erase (t_itr);
     }
+
+    config_table config (get_self(), get_self().value);
+    config.remove();
 }
 
 ACTION genesisgen::setconfig (const asset gft_eos_rate,
@@ -47,7 +50,7 @@ ACTION genesisgen::generate (name token_contract,
         t.from              = from;
         t.to                = to;
 
-       // asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
+        asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
         // print ("    One gyftie token:   ", one_gyftie_token, "\n");
 
         print ("    Gyfter balance:     ", a_itr->balance, "\n");
@@ -55,7 +58,7 @@ ACTION genesisgen::generate (name token_contract,
         config_table config (get_self(), get_self().value);
         auto c = config.get();
 
-        //eosio_assert (a_itr->balance < (one_gyftie_token * 1000000), "Gyft feature is disabled for balances of 1,000,000.");
+        eosio_assert (a_itr->balance <= (one_gyftie_token * 10), "Gyft feature is disabled for balances greater than 10 GFT.");
 
         //double gyft_benefit= 1.5;
 

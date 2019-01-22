@@ -22,7 +22,7 @@
      <tr @click="props.expanded = !props.expanded">
       <td>{{ props.item.proposal_id }}</td>
       <td class="text-xs-right">{{ props.item.proposer }}</td>
-      <td class="text-xs-right">{{ props.item.new_token_gen }}</td>
+      <!-- <td class="text-xs-right">{{ props.item.new_token_gen }}</td> -->
       <td class="text-xs-right">{{ props.item.votes_for }}</td>
       <td class="text-xs-right">{{ new Date(props.item.created_date*1000).toISOString().split('T')[0]}}</td>
       </tr>

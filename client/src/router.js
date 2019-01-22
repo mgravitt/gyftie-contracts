@@ -7,6 +7,7 @@ import Issue from './views/Issue.vue'
 import Transfer from './views/Transfer.vue'
 import Propose from './views/Propose.vue'
 import ListProposals from './views/ListProposals.vue'
+import Collaborate from './views/Collaborate.vue'
 import Vote from './views/Vote.vue'
 
 Vue.use(Router)
@@ -42,6 +43,11 @@ export default new Router({
       path: '/propose',
       name: 'propose',
       component: Propose
+    },
+    {
+      path: '/collaborate',
+      name: 'collaborate',
+      component: Collaborate
     },
     {
       path: '/listproposals',

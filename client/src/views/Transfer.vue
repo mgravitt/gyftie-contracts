@@ -45,25 +45,11 @@
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
   import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { network_config, gyftiecontract } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
 
-  const network = Network.fromJson({
-    blockchain:'eos',
-    host:'eos.greymass.com',
-    port:443,
-    protocol:'https',
-    chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906' 
-  })
-
-  // const network = Network.fromJson({
-  //   blockchain:'eos',
-  //   host:'jungle.eosio.cr',
-  //   port:443,
-  //   protocol:'https',
-  //   chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
-  // })
-
+  const network = Network.fromJson(network_config);
   let eos
   const rpc = new JsonRpc(network.fullhost())
   export default {
@@ -121,7 +107,7 @@
         try {
           const result = await eos.transact({
             actions: [{
-              account: 'gyftietokens',
+              account: gyftiecontract, //'gyftietokens',
               name: 'transfer',
               authorization: [{
                 actor: this.account.name,

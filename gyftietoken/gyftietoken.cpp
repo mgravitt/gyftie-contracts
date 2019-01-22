@@ -1,13 +1,22 @@
 #include "gyftietoken.hpp"
 
-ACTION gyftietoken::setconfig (name token_gen) 
+ACTION gyftietoken::setconfig (name token_gen,
+                                name gftorderbook) 
 {
     require_auth (get_self());
         
     config_table config (get_self(), get_self().value);
     Config c;
     c.token_gen = token_gen;
+    c.gftorderbook = gftorderbook;
     config.set (c, get_self());
+}
+
+ACTION gyftietoken::delconfig () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    config.remove();
 }
 
 // TESTING ONLY -- DELETE FOR PRODUCTION
@@ -15,7 +24,7 @@ ACTION gyftietoken::reset ()
 {
     require_auth (get_self());
 
-    setconfig (get_self());
+    delconfig();
 
     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
@@ -42,8 +51,18 @@ ACTION gyftietoken::burnall (name tokenholder)
     a_t.erase (a_itr);
 }
 
+ACTION gyftietoken::removeprop (uint64_t proposal_id) 
+{
+    require_auth (get_self());
+    proposal_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find(proposal_id);
+    eosio_assert (p_itr != p_t.end(), "Proposal ID is not found.");
+
+    p_t.erase (p_itr);
+}
+
 ACTION gyftietoken::propose (name proposer,
-                                name token_gen,
+                               // name token_gen,
                                 string notes) 
 {
     require_auth (proposer);
@@ -55,14 +74,15 @@ ACTION gyftietoken::propose (name proposer,
         p.proposal_id   = p_t.available_primary_key();
         p.created_date  = now();
         p.proposer      = proposer;
-        p.new_token_gen = token_gen;
+      //  p.new_token_gen = token_gen;
         p.notes         = notes;
         p.votes_for     = 0;
+        p.votes_against = 0;
         p.expiration_date   = now() + (60 * 60 * 24 * 30);  // 30 days
     });
 }
 
-ACTION gyftietoken::vote (name voter,
+ACTION gyftietoken::votefor (name voter,
                             uint64_t proposal_id) 
 {
     require_auth (voter);
@@ -72,24 +92,48 @@ ACTION gyftietoken::vote (name voter,
     auto p_itr = p_t.find (proposal_id);
     eosio_assert (now() <= p_itr->expiration_date, "Proposal has expired.");
 
-    auto voter_itr = std::find (p_itr->voters.begin(), p_itr->voters.end(), voter);
-    eosio_assert (voter_itr == p_itr->voters.end(), "User has already voted.");
+    auto voter_for_itr = std::find (p_itr->voters_for.begin(), p_itr->voters_for.end(), voter);
+    eosio_assert (voter_for_itr == p_itr->voters_for.end(), "User has already voted.");
 
-    uint32_t votes = 0;
+    auto voter_against_itr = std::find (p_itr->voters_against.begin(), p_itr->voters_against.end(), voter);
+    eosio_assert (voter_against_itr == p_itr->voters_against.end(), "User has already voted.");
+
+    // uint32_t votes = 0;
 
     p_t.modify (p_itr, get_self(), [&](auto &p) {
         p.votes_for++;
-        votes = p.votes_for;
-        p.voters.push_back (voter);
+        p.voters_for.push_back (voter);
     });
 
-    config_table config (get_self(), get_self().value);
-    auto c = config.get();
+    // config_table config (get_self(), get_self().value);
+    // auto c = config.get();
 
-    if (votes > (c.account_count / 2)) {
-        c.token_gen = p_itr->new_token_gen;
-        config.set (c, get_self());
-    }
+    // if (votes > (c.account_count / 2)) {
+    //     c.token_gen = p_itr->new_token_gen;
+    //     config.set (c, get_self());
+    // }
+}
+
+ACTION gyftietoken::voteagainst (name voter,
+                            uint64_t proposal_id) 
+{
+    require_auth (voter);
+    eosio_assert (is_tokenholder (voter), "Voter is not a GFT token holder.");
+    
+    proposal_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (proposal_id);
+    eosio_assert (now() <= p_itr->expiration_date, "Proposal has expired.");
+
+    auto voter_for_itr = std::find (p_itr->voters_for.begin(), p_itr->voters_for.end(), voter);
+    eosio_assert (voter_for_itr == p_itr->voters_for.end(), "User has already voted.");
+
+    auto voter_against_itr = std::find (p_itr->voters_against.begin(), p_itr->voters_against.end(), voter);
+    eosio_assert (voter_against_itr == p_itr->voters_against.end(), "User has already voted.");
+
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+        p.votes_against++;
+        p.voters_against.push_back (voter);
+    });
 }
 
 ACTION gyftietoken::calcgyft (name from, name to) 
@@ -142,7 +186,6 @@ ACTION gyftietoken::gyft (name from,
     string s { "Gyft" };
     paytoken (get_self(), from, to, a_itr->balance, s);
 }
-
 
 ACTION gyftietoken::create()
 {
@@ -201,7 +244,10 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert(from != to, "cannot transfer to self");
     require_auth(from);
     eosio_assert(is_account(to), "to account does not exist");
-    eosio_assert(is_gyftie_account(to), "Recipient is not a Gyftie account. Must Gyft first.");
+
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+    eosio_assert(is_gyftie_account(to) || c.gftorderbook == to, "Recipient is not a Gyftie account. Must Gyft first.");
 
     auto sym = quantity.symbol.code().raw();
     stats statstable(_self, sym);
@@ -270,4 +316,7 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
     }
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(create)(issue)(transfer)(calcgyft)(gyft)(propose)(vote)(reset)(burnall))
+
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)
+                            (gyft)(propose)(votefor)(voteagainst)(reset)
+                            (burnall)(removeprop))

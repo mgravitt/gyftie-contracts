@@ -1,19 +1,12 @@
 <template>
    
 <div>
-    <h2>Propose New Token Generation Calculation</h2>
+    <h2>Propose Monetary Policy Change</h2>
     <v-flex >
-            
-          <v-text-field
-            v-model="tokengen"
-            label="New Smart Contract"
-            required
-          ></v-text-field>
-
-          
+                      
           <v-text-field
             v-model="explanation"
-            label="Explanation"
+            label="Proposal Explanation"
             required
           ></v-text-field>
        </v-form>
@@ -39,19 +32,12 @@
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
   import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { network_config, gyftiecontract } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
 
-  const network = Network.fromJson({
-    blockchain:'eos',
-    host:'jungle.eosio.cr',
-    port:443,
-    protocol:'https',
-    chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
-  })
-
   let eos
-  const rpc = new JsonRpc(network.fullhost())
+  const rpc = new JsonRpc(network_config)
   export default {
   
     data () {
@@ -60,7 +46,7 @@
         scatter:null,
         result:null,
         proposer: "",
-        tokengen: "gygenesisgen",
+        //tokengen: "gygenesisgen",
         explanation: "back to genesis calculation"
       }
     },
@@ -93,7 +79,7 @@
         this.scatter.forgetIdentity()
       },
       async propose () {
-        console.log (this.tokengen);
+        //console.log (this.tokengen);
         console.log (this.explanation);
         console.log (this.account.name);
         //await alert('Your data: ' + JSON.stringify(this.user))
@@ -109,7 +95,7 @@
         try {
           const result = await eos.transact({
             actions: [{
-              account: 'gyftietoken1',
+              account: gyftiecontract,
               name: 'propose',
               authorization: [{
                 actor: this.account.name,
@@ -117,7 +103,7 @@
               }],
               data: {
                 proposer: this.account.name,
-                token_gen: this.tokengen,
+                //token_gen: this.tokengen,
                 notes: this.explanation
               },
             }]
