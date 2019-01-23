@@ -47,7 +47,7 @@ ACTION genesisgen::generate (name token_contract,
         t.from              = from;
         t.to                = to;
 
-       // asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
+        asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, symbol_precision)), sym};
         // print ("    One gyftie token:   ", one_gyftie_token, "\n");
 
         print ("    Gyfter balance:     ", a_itr->balance, "\n");
@@ -55,7 +55,7 @@ ACTION genesisgen::generate (name token_contract,
         config_table config (get_self(), get_self().value);
         auto c = config.get();
 
-        //eosio_assert (a_itr->balance < (one_gyftie_token * 1000000), "Gyft feature is disabled for balances of 1,000,000.");
+        eosio_assert (a_itr->balance <= (one_gyftie_token * 20), "Gyft feature is disabled for balances over 20.");
 
         //double gyft_benefit= 1.5;
 
