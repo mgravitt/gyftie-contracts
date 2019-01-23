@@ -1,7 +1,7 @@
 <template>
    
 <div>
-    <h2>Transfer Tokens</h2>
+    <h2>Transfer GFT</h2>
     <v-flex >
        <v-form v-model="valid">
           <v-text-field
@@ -12,7 +12,9 @@
           
           <v-text-field
             v-model="quantity"
-            label="Quantity"
+             :rules="[rules.required, rules.gft_asset_format]"
+            label="GFT Amount"
+            suffix="GFT"
             required
           ></v-text-field>
 
@@ -61,7 +63,14 @@
         result:null,
         to: "",
         quantity: "",
-        memo: ""
+        memo: "",
+        rules: {
+          required: value => !!value || 'Required.',
+          gft_asset_format: value => {
+            const pattern = /^(([0-9]*)|(([0-9]*)\.([0-9]*)))$/
+            return pattern.test(value) || 'GFT amount must be numeric. Do not include GFT symbol.'
+          }
+        }
       }
     },
 
@@ -116,7 +125,7 @@
               data: {
                 from: this.account.name,
                 to: this.to,
-                quantity: this.quantity,
+                quantity: Number.parseFloat(this.quantity).toFixed(8) + ' GFT',
                 memo: this.memo
               },
             }]

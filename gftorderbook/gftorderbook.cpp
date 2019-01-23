@@ -1,5 +1,21 @@
 #include "gftorderbook.hpp"
 
+ACTION gftorderbook::setconfig (name gyftiecontract, 
+                        name valid_counter_token_contract,
+                        string valid_counter_symbol_string,
+                        uint8_t valid_counter_symbol_precision)
+{
+    require_auth (get_self());
+        
+    config_table config (get_self(), get_self().value);
+    Config c;
+    c.gyftiecontract = gyftiecontract;
+    c.valid_counter_token_contract = valid_counter_token_contract;
+    c.valid_counter_token_symbol = symbol{symbol_code(valid_counter_symbol_string.c_str()), valid_counter_symbol_precision};
+    config.set (c, get_self());
+}
+
+
 ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amount)
 {
     require_auth (buyer);
@@ -61,8 +77,11 @@ ACTION gftorderbook::buygft (uint64_t sellorder_id, name buyer)
     auto s_itr = s_t.find (sellorder_id);
     eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
 
-    sendfrombal ("gyftietoken"_n, s_itr->seller, buyer, s_itr->gft_amount, "Trade");
-    sendfrombal ("eosio.token"_n, buyer, s_itr->seller, s_itr->order_value, "Trade");
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    sendfrombal (c.gyftiecontract, s_itr->seller, buyer, s_itr->gft_amount, "Trade");
+    sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, s_itr->order_value, "Trade");
 
     s_t.erase (s_itr);
 }
@@ -75,10 +94,45 @@ ACTION gftorderbook::sellgft (uint64_t buyorder_id, name seller)
     auto b_itr = b_t.find (buyorder_id);
     eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
 
-    sendfrombal ("eosio.token"_n, b_itr->buyer, seller, b_itr->order_value, "Trade");
-    sendfrombal ("gyftietoken"_n, seller, b_itr->buyer, b_itr->gft_amount, "Trade");
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, b_itr->order_value, "Trade");
+    sendfrombal (c.gyftiecontract, seller, b_itr->buyer, b_itr->gft_amount, "Trade");
 
     b_t.erase (b_itr);
+}
+
+ACTION gftorderbook::delbuyorder (uint64_t buyorder_id) 
+{
+    buyorder_table b_t (get_self(), get_self().value);
+    auto b_itr = b_t.find (buyorder_id);
+    eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
+
+    require_auth (b_itr->buyer);
+
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    sendfrombal (c.valid_counter_token_contract, b_itr->buyer, b_itr->buyer, b_itr->order_value, "Cancelled Buy Order");
+
+    b_t.erase (b_itr);
+}
+
+ACTION gftorderbook::delsellorder (uint64_t sellorder_id) 
+{
+    sellorder_table s_t (get_self(), get_self().value);
+    auto s_itr = s_t.find (sellorder_id);
+    eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
+
+    require_auth (s_itr->seller);
+
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    sendfrombal (c.gyftiecontract, s_itr->seller, s_itr->seller, s_itr->gft_amount, "Cancelled Sell Order");
+
+    s_t.erase (s_itr);
 }
 
 ACTION gftorderbook::removeorders () 
@@ -110,6 +164,21 @@ ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
     print ("To          : ", to, "\n");
     print ("Quantity    : ", quantity, "\n");
     print ("Memo        : ", memo.c_str(), "\n");
+
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+    eosio_assert (get_code() == c.gyftiecontract || get_code() == c.valid_counter_token_contract, "Funds are only accepted from Gyftie contract or valid counter token contract.");
+
+    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    eosio_assert (quantity.symbol == gft_symbol || quantity.symbol == c.valid_counter_token_symbol, "Funds are only accepted in GFT symbol or valid counter token symbol.");
+
+    if (get_code() == c.gyftiecontract) {
+         eosio_assert (quantity.symbol == gft_symbol, "Invalid symbol from gyftie contract.");
+    }
+
+    if (get_code() == c.valid_counter_token_contract) {
+        eosio_assert (quantity.symbol == c.valid_counter_token_symbol, "Invalid symbol from counter token contract.");
+    }
     
     balance_table balances(_self, from.value);
     asset new_balance;
@@ -142,7 +211,9 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (limitbuygft)(limitsellgft)(buygft)(sellgft)(removeorders))
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(buygft)
+                                                    (sellgft)(removeorders)
+                                                    (delbuyorder)(delsellorder))
             }    
         }
         eosio_exit(0);

@@ -26,56 +26,45 @@
             <v-icon>send</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Transfer</v-list-tile-title>
+            <v-list-tile-title>Transfer GFT</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
 
          <v-list-tile :to= "{ name: 'gyft'}" @click="">
           <v-list-tile-action>
-            <v-icon>plus_one</v-icon>
+            <v-icon>person_add</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Gyft</v-list-tile-title>
+            <v-list-tile-title>Gyft / Earn</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
 
          <v-list-tile :to= "{ name: 'collaborate'}" @click="">
           <v-list-tile-action>
-            <v-icon>flash_on</v-icon>
+            <v-icon>group</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
             <v-list-tile-title>Collaborate</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile> 
-<!-- 
-         <v-list-tile :to= "{ name: 'propose'}" @click="">
+
+        <v-list-tile :to= "{ name: 'buygft'}" @click="">
           <v-list-tile-action>
-            <v-icon>edit</v-icon>
+            <v-icon>local_grocery_store</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Propose Calculation</v-list-tile-title>
+            <v-list-tile-title>Buy GFT</v-list-tile-title>
           </v-list-tile-content>
-        </v-list-tile>
+        </v-list-tile> 
 
-        <v-list-tile :to= "{ name: 'listproposals'}" @click="">
+        <v-list-tile :to= "{ name: 'sellgft'}" @click="">
           <v-list-tile-action>
-            <v-icon>list</v-icon>
+            <v-icon>local_offer</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>List Proposals</v-list-tile-title>
+            <v-list-tile-title>Sell GFT</v-list-tile-title>
           </v-list-tile-content>
-        </v-list-tile>
-
-
-        <v-list-tile :to= "{ name: 'vote'}" @click="">
-          <v-list-tile-action>
-            <v-icon>thumb_up_alt</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title>Vote</v-list-tile-title>
-          </v-list-tile-content>
-        </v-list-tile> -->
-
+        </v-list-tile> 
 
       </v-list>
     </v-navigation-drawer>

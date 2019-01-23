@@ -16,6 +16,11 @@ CONTRACT gftorderbook : public contract
 
   public:
 
+    ACTION setconfig (name gyftiecontract, 
+                        name valid_counter_token_contract,
+                        string valid_counter_symbol_string,
+                        uint8_t valid_counter_symbol_precision);
+                        
    ACTION removeorders () ;
 
    ACTION limitbuygft (name buyer, asset price_per_gft, asset gft_amount);
@@ -26,11 +31,27 @@ CONTRACT gftorderbook : public contract
 
    ACTION sellgft (uint64_t buyorder_id, name seller);
 
+   ACTION delbuyorder (uint64_t buyorder_id);
+
+   ACTION delsellorder (uint64_t sellorder_id);
+
    ACTION transrec (name from, name to, asset quantity, string memo);
 
   private:
 
-   const uint64_t SCALER = 1000000000;
+    const uint64_t SCALER = 1000000000;
+    const string    GYFTIE_SYM_STR  = "GFT";
+    const uint8_t   GYFTIE_PRECISION = 8;
+
+   TABLE Config
+   {
+       name         gyftiecontract;
+       name         valid_counter_token_contract;
+       symbol       valid_counter_token_symbol;
+   };
+
+   typedef singleton<"configs"_n, Config> config_table;
+   typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
 
    TABLE buyorder
     {

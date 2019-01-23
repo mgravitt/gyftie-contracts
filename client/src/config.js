@@ -8,3 +8,5 @@ export const network_config = {
 };
 
 export const gyftiecontract = 'gyftietoken1';
+
+export const gftorderbook = 'gftorderbook';

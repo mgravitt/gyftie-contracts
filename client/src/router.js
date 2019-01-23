@@ -8,6 +8,9 @@ import Transfer from './views/Transfer.vue'
 import Propose from './views/Propose.vue'
 import ListProposals from './views/ListProposals.vue'
 import Collaborate from './views/Collaborate.vue'
+import BuyGFT from './views/BuyGFT.vue'
+import SellGFT from './views/SellGFT.vue'
+
 import Vote from './views/Vote.vue'
 
 Vue.use(Router)
@@ -38,6 +41,16 @@ export default new Router({
       path: '/gyft',
       name: 'gyft',
       component: Gyft
+    },
+    {
+      path: '/buygft',
+      name: 'buygft',
+      component: BuyGFT
+    },
+    {
+      path: '/sellgft',
+      name: 'sellgft',
+      component: SellGFT
     },
     {
       path: '/propose',
