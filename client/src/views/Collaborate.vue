@@ -27,7 +27,7 @@
     item-key="proposal_id">
 
     <template slot="items" slot-scope="props">
-      <td>{{ props.item.proposal_id }}</td>
+      <!-- <td>{{ props.item.proposal_id }}</td> -->
       <td class="text-xs-right">{{ props.item.proposer }}</td>
       <td class="text-xs-left">{{ props.item.notes }}</td>
       <td class="text-xs-right">{{ props.item.votes_for }}</td>
@@ -35,16 +35,14 @@
 
          <td >
           <v-icon
-            small
             @click="vote_up(props.item)"
           >
-            arrow_upward
+            thumb_up_alt
           </v-icon>
           <v-icon
-            small
             @click="vote_down(props.item)"
           >
-            arrow_downward
+            thumb_down_alt
           </v-icon>
         </td>
    
@@ -68,7 +66,7 @@
 <script>
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
-  import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { Api, JsonRpc} from 'eosjs'
   import { network_config, gyftiecontract } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
@@ -84,20 +82,13 @@
         scatter:null,
         result:null,
         proposer: "",
-        //tokengen: "gygenesisgen",
         explanation: "",
         headers: [
-          {
-            text: 'Proposal ID',
-            align: 'left',
-            sortable: false,
-            value: 'proposal_id'
-          },
           { text: 'Proposer', value: 'proposer' },
           { text: 'Notes', value: 'notes' },
           { text: 'Votes For', value: 'votes_for' },
           { text: 'Votes Against', value: 'votes_against' },
-          { text: 'Vote', value: '' },
+          { text: 'Vote', value: '', sortable: false },
         ],
         proposals: []
       }
@@ -108,7 +99,7 @@
 
       ScatterJS.scatter.connect('Gyftie').then(connected => {
         if(!connected){
-          console.error('Could not connect to Scatter.')
+          this.result = 'Could not connect to Scatter. Please install, run, and/or restart.'
           return
         }
         this.scatter = ScatterJS.scatter
@@ -116,12 +107,11 @@
 
        rpc.get_table_rows({
             "json": true,
-            "code": gyftiecontract, //"gyftietoken1",   // contract who owns the table
-            "scope": gyftiecontract,  // scope of the table
-            "table": "proposals",    // name of the table as specified by the contract abi
+            "code": gyftiecontract, 
+            "scope": gyftiecontract,  
+            "table": "proposals",    
             "limit": 100,
         }).then( result => {
-            console.log (result.rows);
             this.proposals = result.rows;
         });            
     },
@@ -132,7 +122,6 @@
         return this.scatter.identity.accounts[0]
       },
     },
-
 
     methods: {
       login(){
@@ -145,8 +134,7 @@
         
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+      
         const completed = res => {
           this.result = res
           this.sending = false
@@ -178,8 +166,7 @@
     async vote_up (proposal) {
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+   
         const completed = res => {
           this.result = res
           this.sending = false
@@ -209,11 +196,9 @@
         }
     },
     async vote_down(proposal) {
-        console.log (proposal.proposal_id);
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+     
         const completed = res => {
           this.result = res
           this.sending = false

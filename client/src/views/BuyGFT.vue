@@ -1,64 +1,56 @@
 <template>
-   
 <div>
     <h2>Create New Buy Offer</h2>
-    <v-flex >                      
-        <v-form v-model="valid">
-          <v-text-field
-            v-model="price_per_gft"
-            :rules="[rules.required, rules.asset_format]"
-            label="Offer Price per GFT (in EOS)"
-            suffix="EOS"
-            required
-          ></v-text-field>
-          
-          <v-text-field
-            v-model="gft_amount"
-            :rules="[rules.required, rules.asset_format]"
-            label="GFT Amount"
-            suffix="GFT"
-            required
-          ></v-text-field>
-       </v-form>
+    <v-flex>       
+      <v-text-field
+        v-model="price_per_gft"
+        :rules="[rules.required, rules.asset_format]"
+        label="Offer Price per GFT (in EOS)"
+        suffix="EOS"
+        required
+      ></v-text-field>
+      
+      <v-text-field
+        v-model="gft_amount"
+        :rules="[rules.required, rules.asset_format]"
+        label="GFT Amount"
+        suffix="GFT"
+        required
+      ></v-text-field>
+  
     </v-flex>
     
     <br/>
 
-     <v-btn color="primary" @click.prevent="place_buy_order">Place Buy Order</v-btn>
+    <v-btn color="primary" @click.prevent="place_buy_order">Place Buy Order</v-btn>
 
     <br/>
     <br/>
     <br/>
     <h2>Open Sell Orders</h2>
-     <v-data-table
-    :headers="headers"
-    :items="sellorders"
-    item-key="order_id">
+    <v-data-table
+      :headers="headers"
+      :items="sellorders"
+      item-key="order_id">
 
-    <template slot="items" slot-scope="props">
-      <td>{{ props.item.order_id }}</td>
-      <td class="text-xs-right">{{ props.item.seller }}</td>
-      <td class="text-xs-left">{{ props.item.price_per_gft}}</td>
-      <td class="text-xs-right">{{ props.item.gft_amount }}</td>
-      <td class="text-xs-right">{{ props.item.order_value }}</td>
+      <template slot="items" slot-scope="props">
+        <td>{{ props.item.order_id }}</td>
+        <td class="text-xs-right">{{ props.item.seller }}</td>
+        <td class="text-xs-left">{{ props.item.price_per_gft}}</td>
+        <td class="text-xs-right">{{ props.item.gft_amount }}</td>
+        <td class="text-xs-right">{{ props.item.order_value }}</td>
 
-         <td >
-          <v-icon
-            small
-            @click="accept_order(props.item)"
-          >
+        <td>
+          <v-icon @click="accept_order(props.item)">
             transfer_within_a_station
           </v-icon>
-          <v-icon
-            small
-            @click="remove_order(props.item)"
-          >
+          <v-icon @click="remove_order(props.item)">
             delete
           </v-icon>
         </td>
-   
-    </template>
-  </v-data-table>
+    
+      </template>
+    </v-data-table>
     <br/>
     <br/>
     <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>
@@ -73,12 +65,11 @@
 </div>
 </template>
 
-
 <script>
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
-  import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
-  import { network_config, gyftiecontract, gftorderbook } from '../config';
+  import { Api, JsonRpc} from 'eosjs'
+  import { network_config, gftorderbook } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
 
@@ -123,7 +114,7 @@
 
       ScatterJS.scatter.connect('Gyftie').then(connected => {
         if(!connected){
-          console.error('Could not connect to Scatter.')
+          this.result = 'Could not connect to Scatter. Please install, run, and/or restart.'
           return
         }
         this.scatter = ScatterJS.scatter
@@ -136,7 +127,6 @@
             "table": "sellorders",    // name of the table as specified by the contract abi
             "limit": 100,
         }).then( result => {
-            console.log (result.rows);
             this.sellorders = result.rows;
         });            
     },
@@ -147,7 +137,6 @@
         return this.scatter.identity.accounts[0]
       },
     },
-
 
     methods: {
       login(){
@@ -160,20 +149,15 @@
         
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+      
         const completed = res => {
           this.result = res
           this.sending = false
         }
 
-        let order_value = Number.parseFloat(this.gft_amount * this.price_per_gft).toFixed(4) + ' EOS'
-        console.log (order_value);
-
         try {
           const result = await eos.transact({
-            actions: [
-            {
+            actions: [{
               account: 'eosio.token',
               name: 'transfer',
               authorization: [{
@@ -199,9 +183,7 @@
                 price_per_gft: Number.parseFloat(this.price_per_gft).toFixed(4) + ' EOS',
                 gft_amount: Number.parseFloat(this.gft_amount).toFixed(8) + ' GFT'
               },
-            }
-            
-            ]
+            }]
           }, {
               blocksBehind: 3,
               expireSeconds: 30,
@@ -214,8 +196,7 @@
     async accept_order (order) {
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+      
         const completed = res => {
           this.result = res
           this.sending = false
@@ -263,8 +244,7 @@
         
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+     
         const completed = res => {
           this.result = res
           this.sending = false

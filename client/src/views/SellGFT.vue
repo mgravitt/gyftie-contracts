@@ -22,46 +22,41 @@
           ></v-text-field>
 
        </v-form>
-    
     </v-flex>
     
     <br/>
 
-     <v-btn color="primary" @click.prevent="place_sell_order">Place Sell Order</v-btn>
+    <v-btn color="primary" @click.prevent="place_sell_order">Place Sell Order</v-btn>
 
     <br/>
     <br/>
     <br/>
+
     <h2>Open Buy Orders</h2>
-     <v-data-table
-    :headers="headers"
-    :items="buyorders"
-    item-key="order_id">
+    <v-data-table
+      :headers="headers"
+      :items="buyorders"
+      item-key="order_id">
 
-    <template slot="items" slot-scope="props">
-      <td>{{ props.item.order_id }}</td>
-      <td class="text-xs-right">{{ props.item.buyer }}</td>
-      <td class="text-xs-left">{{ props.item.price_per_gft}}</td>
-      <td class="text-xs-right">{{ props.item.gft_amount }}</td>
-      <td class="text-xs-right">{{ props.item.order_value }}</td>
+      <template slot="items" slot-scope="props">
+        <td>{{ props.item.order_id }}</td>
+        <td class="text-xs-right">{{ props.item.buyer }}</td>
+        <td class="text-xs-left">{{ props.item.price_per_gft}}</td>
+        <td class="text-xs-right">{{ props.item.gft_amount }}</td>
+        <td class="text-xs-right">{{ props.item.order_value }}</td>
 
-         <td >
-          <v-icon
-            small
-            @click="accept_order(props.item)"
-          >
+        <td >
+          <v-icon @click="accept_order(props.item)">
             transfer_within_a_station
           </v-icon>
-          <v-icon
-            small
-            @click="remove_order(props.item)"
-          >
+          <v-icon @click="remove_order(props.item)">
             delete
           </v-icon>
         </td>
-   
-    </template>
-  </v-data-table>
+    
+      </template>
+    </v-data-table>
+
     <br/>
     <br/>
     <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>
@@ -76,11 +71,10 @@
 </div>
 </template>
 
-
 <script>
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
-  import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { Api, JsonRpc } from 'eosjs'
   import { network_config, gyftiecontract, gftorderbook } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
@@ -126,7 +120,7 @@
 
       ScatterJS.scatter.connect('Gyftie').then(connected => {
         if(!connected){
-          console.error('Could not connect to Scatter.')
+          this.result = 'Could not connect to Scatter. Please install, run, and/or restart.'
           return
         }
         this.scatter = ScatterJS.scatter
@@ -139,7 +133,6 @@
             "table": "buyorders",    // name of the table as specified by the contract abi
             "limit": 100,
         }).then( result => {
-            console.log (result.rows);
             this.buyorders = result.rows;
         });            
     },
@@ -150,7 +143,6 @@
         return this.scatter.identity.accounts[0]
       },
     },
-
 
     methods: {
       login(){
@@ -163,8 +155,7 @@
         
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+       
         const completed = res => {
           this.result = res
           this.sending = false
@@ -214,8 +205,7 @@
     async accept_order (order) {
       if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+        
         const completed = res => {
           this.result = res
           this.sending = false
@@ -262,8 +252,7 @@
     async remove_order(order) {
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+        
         const completed = res => {
           this.result = res
           this.sending = false

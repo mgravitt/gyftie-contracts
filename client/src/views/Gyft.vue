@@ -1,17 +1,20 @@
 <template>
    
 <div>
-    <h2>Gyft Tokens</h2>
+    <h2>Gyft / Earn</h2>
     <v-flex >
        <v-form v-model="valid">
           <v-text-field
             v-model="to"
+              :rules="[rules.required]"
             label="Gyftie Account Name"
             required
+            counter="12"
           ></v-text-field>
           
           <v-text-field
             v-model="idfield"
+             :rules="[rules.required]"
             label="Government Issued ID Number"
             required
           ></v-text-field>
@@ -34,11 +37,11 @@
 </div>
 </template>
 
-
 <script>
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
-  import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { Api, JsonRpc } from 'eosjs'
+  import { network_config, gyftiecontract } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
 
@@ -50,22 +53,7 @@
     return hashHex;
   }
 
-  const network = Network.fromJson({
-    blockchain:'eos',
-    host:'eos.greymass.com',
-    port:443,
-    protocol:'https',
-    chainId:'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906' 
-  })
-
-  // const network = Network.fromJson({
-  //   blockchain:'eos',
-  //   host:'jungle.eosio.cr',
-  //   port:443,
-  //   protocol:'https',
-  //   chainId:'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' 
-  // })
-
+  const network = Network.fromJson(network_config);
   let eos
   const rpc = new JsonRpc(network.fullhost())
   export default {
@@ -76,7 +64,10 @@
         scatter:null,
         result:null,
         to: "",
-        idfield: ""
+        idfield: "",
+        rules: {
+          required: value => !!value || 'Required.'
+        }
       }
     },
 
@@ -85,7 +76,7 @@
 
       ScatterJS.scatter.connect('Gyftie').then(connected => {
         if(!connected){
-          console.error('Could not connect to Scatter.')
+          this.result = 'Could not connect to Scatter. Please install, run, and/or restart.'
           return
         }
         this.scatter = ScatterJS.scatter
@@ -109,11 +100,9 @@
       },
       async gyftTokens () {
 
-       // await alert('Your data: ' + JSON.stringify(this.user))
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+      
         const completed = res => {
           this.result = res
           this.sending = false
@@ -122,7 +111,7 @@
         try {
           const result = await eos.transact({
             actions: [{
-              account: 'gyftietokens',
+              account: gyftiecontract,
               name: 'calcgyft',
               authorization: [{
                 actor: this.account.name,
@@ -134,7 +123,7 @@
               },
             }
             ,{
-              account: 'gyftietokens',
+              account: gyftiecontract,
               name: 'gyft',
               authorization: [{
                 actor: this.account.name,

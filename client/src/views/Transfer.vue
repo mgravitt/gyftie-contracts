@@ -3,11 +3,13 @@
 <div>
     <h2>Transfer GFT</h2>
     <v-flex >
-       <v-form v-model="valid">
+       <v-form>
           <v-text-field
             v-model="to"
+              :rules="[rules.required, rules.eos_account]"
             label="To"
             required
+            counter="12"
           ></v-text-field>
           
           <v-text-field
@@ -46,7 +48,7 @@
 <script>
   import ScatterJS, {Network} from 'scatterjs-core'
   import ScatterEOS from 'scatterjs-plugin-eosjs2'
-  import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs'
+  import { Api, JsonRpc } from 'eosjs'
   import { network_config, gyftiecontract } from '../config';
 
   ScatterJS.plugins( new ScatterEOS() )
@@ -69,6 +71,10 @@
           gft_asset_format: value => {
             const pattern = /^(([0-9]*)|(([0-9]*)\.([0-9]*)))$/
             return pattern.test(value) || 'GFT amount must be numeric. Do not include GFT symbol.'
+          },
+          eos_account: value => {
+            const pattern = /^[a-z1-5.]{1,12}$/
+            return pattern.test(value) || 'EOS account must be 1-12 characters [a-z1-5.]'
           }
         }
       }
@@ -79,7 +85,7 @@
 
       ScatterJS.scatter.connect('Gyftie').then(connected => {
         if(!connected){
-          console.error('Could not connect to Scatter.')
+          this.result = 'Could not connect to Scatter. Please install, run, and/or restart.'
           return
         }
         this.scatter = ScatterJS.scatter
@@ -103,11 +109,9 @@
       },
       async sendTokens () {
 
-        //await alert('Your data: ' + JSON.stringify(this.user))
         if(this.sending) return
         this.sending = true
-        const options = { authorization:[`${this.account.name}@${this.account.authority}`] }
-
+        
         const completed = res => {
           this.result = res
           this.sending = false
