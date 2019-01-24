@@ -21,7 +21,6 @@ import ScatterEOS from "scatterjs-plugin-eosjs2";
 import { JsonRpc } from "eosjs";
 import { network_config, gyftiecontract } from '../config';
 
-
 ScatterJS.plugins(new ScatterEOS());
 
 const network = Network.fromJson(network_config)

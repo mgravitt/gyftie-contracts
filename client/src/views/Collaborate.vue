@@ -1,53 +1,47 @@
 <template>
-   
 <div>
     <h2>Create New Monetary Policy Change Proposal</h2>
     <v-flex >
                       
-          <v-textarea
+        <v-textarea
             v-model="explanation"
             label="Proposal Explanation"
             hint="Type your proposal in clear language"
             required
-          ></v-textarea>
+        ></v-textarea>
     
     </v-flex>
     
     <br/>
 
-     <v-btn color="primary" @click.prevent="propose">Propose</v-btn>
+    <v-btn color="primary" @click.prevent="propose">Propose</v-btn>
 
     <br/>
     <br/>
     <br/>
     <h2>Vote on Open Proposals</h2>
-     <v-data-table
-    :headers="headers"
-    :items="proposals"
-    item-key="proposal_id">
+    <v-data-table
+        :headers="headers"
+        :items="proposals"
+        item-key="proposal_id">
 
-    <template slot="items" slot-scope="props">
-      <!-- <td>{{ props.item.proposal_id }}</td> -->
-      <td class="text-xs-right">{{ props.item.proposer }}</td>
-      <td class="text-xs-left">{{ props.item.notes }}</td>
-      <td class="text-xs-right">{{ props.item.votes_for }}</td>
-      <td class="text-xs-right">{{ props.item.votes_against }}</td>
+        <template slot="items" slot-scope="props">
+            <td class="text-xs-right">{{ props.item.proposer }}</td>
+            <td class="text-xs-left">{{ props.item.notes }}</td>
+            <td class="text-xs-right">{{ props.item.votes_for }}</td>
+            <td class="text-xs-right">{{ props.item.votes_against }}</td>
 
-         <td >
-          <v-icon
-            @click="vote_up(props.item)"
-          >
-            thumb_up_alt
-          </v-icon>
-          <v-icon
-            @click="vote_down(props.item)"
-          >
-            thumb_down_alt
-          </v-icon>
-        </td>
-   
-    </template>
-  </v-data-table>
+            <td >
+                <v-icon @click="vote_up(props.item)">
+                    thumb_up_alt
+                </v-icon>
+                <v-icon @click="vote_down(props.item)">
+                    thumb_down_alt
+                </v-icon>
+            </td>
+
+        </template>
+    </v-data-table>
     <br/>
     <br/>
     <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>

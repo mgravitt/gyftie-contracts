@@ -1,46 +1,44 @@
 <template>
-   
 <div>
-    <h2>Transfer GFT</h2>
-    <v-flex >
-       <v-form>
-          <v-text-field
-            v-model="to"
-              :rules="[rules.required, rules.eos_account]"
-            label="To"
-            required
-            counter="12"
-          ></v-text-field>
-          
-          <v-text-field
-            v-model="quantity"
-             :rules="[rules.required, rules.gft_asset_format]"
-            label="GFT Amount"
-            suffix="GFT"
-            required
-          ></v-text-field>
-
-          
-          <v-text-field
-            v-model="memo"
-            label="Memo"
-            required
-          ></v-text-field>
-       </v-form>
-    </v-flex>
-    
-    <br/>
-    <br/>
-     <v-btn color="primary" @click.prevent="sendTokens">Send Tokens</v-btn>
-      <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>
-     <section v-if="scatter && account">
-          Logged in with: {{account.name}}
-          <v-btn @click="logout">Logout</v-btn>
-     </section>
-      <section v-if="result">
-            <br>
-            {{result}}
-      </section>
+  <h2>Transfer GFT</h2>
+  <v-flex >
+    <v-form>
+      <v-text-field
+        v-model="to"
+          :rules="[rules.required, rules.eos_account]"
+        label="To"
+        required
+        counter="12"
+      ></v-text-field>
+      
+      <v-text-field
+        v-model="quantity"
+          :rules="[rules.required, rules.gft_asset_format]"
+        label="GFT Amount"
+        suffix="GFT"
+        required
+      ></v-text-field>
+      
+      <v-text-field
+        v-model="memo"
+        label="Memo"
+        required
+      ></v-text-field>
+    </v-form>
+  </v-flex>
+  
+  <br/>
+  <br/>
+  <v-btn color="primary" @click.prevent="sendTokens">Send Tokens</v-btn>
+  <v-btn @click="login" v-if="scatter && !account">Login with Scatter</v-btn>
+  <section v-if="scatter && account">
+    Logged in with: {{account.name}}
+    <v-btn @click="logout">Logout</v-btn>
+  </section>
+  <section v-if="result">
+    <br>
+    {{result}}
+  </section>
 </div>
 </template>
 

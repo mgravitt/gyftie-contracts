@@ -103,7 +103,7 @@
           { text: 'Price', value: 'price_per_gft' },
           { text: 'GFT Amount', value: 'gft_amount' },
           { text: 'Order Value', value: 'order_value' },
-          { text: 'Actions', value: '' },
+          { text: 'Actions', value: '', sortable: false },
         ],
         sellorders: []
       }

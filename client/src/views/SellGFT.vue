@@ -1,27 +1,23 @@
 <template>
-   
 <div>
     <h2>Create New Sell Offer</h2>
     <v-flex >
-                      
-         <v-form v-model="valid">
-          <v-text-field
-            v-model="price_per_gft"
-            :rules="[rules.required, rules.asset_format]"
-            label="Offer Price per GFT (in EOS)"
-            suffix="EOS"
-            required
-          ></v-text-field>
-          
-          <v-text-field
-            v-model="gft_amount"
-            :rules="[rules.required, rules.asset_format]"
-            label="GFT Amount"
-            suffix="GFT"
-            required
-          ></v-text-field>
+      <v-text-field
+        v-model="price_per_gft"
+        :rules="[rules.required, rules.asset_format]"
+        label="Offer Price per GFT (in EOS)"
+        suffix="EOS"
+        required
+      ></v-text-field>
+      
+      <v-text-field
+        v-model="gft_amount"
+        :rules="[rules.required, rules.asset_format]"
+        label="GFT Amount"
+        suffix="GFT"
+        required
+      ></v-text-field>
 
-       </v-form>
     </v-flex>
     
     <br/>
@@ -109,7 +105,7 @@
           { text: 'Price', value: 'price_per_gft' },
           { text: 'GFT Amount', value: 'gft_amount' },
           { text: 'Order Value', value: 'order_value' },
-          { text: 'Actions', value: '' },
+          { text: 'Actions', value: '', sortable: false },
         ],
         buyorders: []
       }
