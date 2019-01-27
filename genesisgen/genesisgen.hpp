@@ -16,11 +16,9 @@ CONTRACT genesisgen : public contract
     ACTION setconfig (const asset gft_eos_rate,
                         const float gyfter_payback_rate);
 
-    ACTION generate (name token_contract,
-                     string symbol_string,
-                     uint8_t    symbol_precision,
-                     name from,
-                     name to);
+    ACTION generate (   name from,
+                            asset gyfter_gft_balance,
+                            name to);
 
     ACTION reset ();
     

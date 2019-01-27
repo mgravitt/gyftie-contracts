@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>    // std::find
 #include <eosiolib/singleton.hpp>
+#include <math.h>
 
 using std::string;
 using std::vector;
@@ -15,7 +16,9 @@ CONTRACT gyftietoken : public contract
 
   public:
 
-    ACTION setconfig (name token_gen);
+    ACTION setconfig (name token_gen, name gftorderbook, name gyftie_foundation);
+
+    ACTION delconfig ();
 
     ACTION create();
 
@@ -27,15 +30,21 @@ CONTRACT gyftietoken : public contract
     
     ACTION gyft (name from, name to, string idhash);
 
-    ACTION propose (name proposer, name token_gen, string notes);
+    ACTION propose (name proposer, string notes);
 
-    ACTION vote (name voter, uint64_t   proposal_id);
+    ACTION votefor (name voter, uint64_t   proposal_id);
+
+    ACTION voteagainst (name voter, uint64_t   proposal_id);
 
     // TESTING ONLY -- DELETE FOR PRODUCTION
     ACTION reset () ;
 
     // TESTING ONLY -- DELETE FOR PRODUCTION
     ACTION burnall (name tokenholder);
+
+    ACTION removeprop (uint64_t proposal_id);
+
+    ACTION setcounter (uint64_t account_count);
 
   private:
 
@@ -45,11 +54,20 @@ CONTRACT gyftietoken : public contract
     TABLE Config
     {
         name        token_gen;
-        uint32_t    account_count = 0;        
+        name        gftorderbook;
+        name        gyftie_foundation;
     };
 
     typedef singleton<"configs"_n, Config> config_table;
     typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
+
+    TABLE Counter 
+    {
+        uint32_t    account_count = 0;
+    };
+
+    typedef singleton<"counters"_n, Counter> counter_table;
+    typedef eosio::multi_index<"counters"_n, Counter> counter_table_placeholder;
 
     TABLE proposal 
     {
@@ -58,8 +76,10 @@ CONTRACT gyftietoken : public contract
         name            proposer;
         name            new_token_gen;
         string          notes;
-        vector<name>    voters;
+        vector<name>    voters_for;
         uint32_t        votes_for;
+        vector<name>    voters_against;
+        uint32_t        votes_against;
         uint32_t        expiration_date;
         uint64_t        primary_key() const { return proposal_id; }
     };
@@ -94,6 +114,15 @@ CONTRACT gyftietoken : public contract
 
     typedef eosio::multi_index<"accounts"_n, account> accounts;
     typedef eosio::multi_index<"stat"_n, currency_stats> stats;
+
+    TABLE balance 
+    {
+        asset funds;
+        name token_contract;
+        uint64_t primary_key() const { return funds.symbol.code().raw(); }
+    };
+
+    typedef eosio::multi_index<"balances"_n, balance> balance_table;
 
     void sub_balance(name owner, asset value);
     void add_balance(name owner, asset value, name ram_payer);
@@ -133,9 +162,13 @@ CONTRACT gyftietoken : public contract
         asset zero_balance = asset { 0, sym };
         if (a_itr->balance <= zero_balance) {
             return false;
-        }
-        
+        }        
         return true;
+    }
+
+    bool is_paused () 
+    {
+        return false;
     }
 
     bool is_gyftie_account (name account) 
@@ -151,19 +184,19 @@ CONTRACT gyftietoken : public contract
 
     void increment_account_count () 
     {
-        config_table config (get_self(), get_self().value);
-        auto c = config.get();
+        counter_table counter (get_self(), get_self().value);
+        auto c = counter.get();
         c.account_count++;
-        config.set (c, get_self());
+        counter.set (c, get_self());
     }
 
-    void decrement_account_count () 
-    {
-        config_table config (get_self(), get_self().value);
-        auto c = config.get();
-        c.account_count--;
-        config.set (c, get_self());
-    }
+    // void decrement_account_count () 
+    // {
+    //     counter_table counter (get_self(), get_self().value);
+    //     auto c = config.get();
+    //     c.account_count--;
+    //     config.set (c, get_self());
+    // }
 
     void save_idhash (const name account, const string idhash) 
     {
@@ -183,4 +216,30 @@ CONTRACT gyftietoken : public contract
             });
         }
     }
+
+    asset getgftbalance (name account)
+    {
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        asset gft_balance = asset { 0, sym };
+
+        accounts a_t (get_self(), account.value);
+        auto a_itr = a_t.find (sym.code().raw());
+        if (a_itr != a_t.end()) {
+            gft_balance += a_itr->balance;
+        }
+
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+
+        balance_table b_t (c.gftorderbook, account.value);
+        auto b_itr = b_t.find (sym.code().raw());
+        if (b_itr != b_t.end() && b_itr->token_contract == get_self()) {
+            gft_balance += b_itr->funds;
+        }
+
+        //print (" GFT Balance: ", gft_balance, "\n");
+        
+        return gft_balance;
+    }
+
 };
