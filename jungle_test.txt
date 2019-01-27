@@ -1,0 +1,80 @@
+
+alias cleos='docker exec -it contracts_nodeosd_1 /opt/eosio/bin/cleos -u http://jungle2.cryptolions.io:18888 --wallet-url http://keosd:8900'
+
+
+
+Keys:
+Private key: 5KAunQfsUCTrfy3cCdNyW5mMNnMSkH5EMP45oEjF2B6xKacoC3x
+Public key: EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA
+
+
+accounts:
+
+gyftietokens
+gyftieuser11
+gyftieuser12
+gyftieuser13
+gygenesisgen
+gyfsecondgen
+
+gygenesisge1
+
+
+cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gyftietokens","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gyftietokens","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gygenesisge1","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gygenesisge1","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gygenesisge1
+cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gftorderbook","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gftorderbook
+
+
+http://jungle2.cryptolions.io
+
+# Setup
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens burnall '["gyftietokens"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens burnall '["gyftieuser11"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens burnall '["gyftieuser12"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens burnall '["gyftieuser13"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens reset '[]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens delconfig '[]' -p gyftietokens
+
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens removeprop '[0]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens removeprop '[1]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens removeprop '[2]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gygenesisgen reset '[]' -p gygenesisgen
+cleos -u http://jungle2.cryptolions.io set contract gygenesisge1 genesisgen/
+cleos -u http://jungle2.cryptolions.io set contract gyftietokens gyftietoken/
+cleos -u http://jungle2.cryptolions.io set contract gftorderbook gftorderbook/
+
+cleos -u http://jungle2.cryptolions.io push action gygenesisge1 setconfig '["0.20000000 GFT", 1.500000000000]' -p gygenesisge1
+cleos -u http://jungle2.cryptolions.io push action gyftietokens setconfig '["gygenesisge1", "gftorderbook", "gyftiegyftie"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens setcounter '[0]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gftorderbook setconfig '["gyftietokens", "eosio.token", "EOS", 4]' -p gftorderbook
+
+
+
+cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens configs
+cleos -u http://jungle2.cryptolions.io get table gftorderbook gftorderbook configs
+
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens create '[]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io get table gyftietokens GFT stat
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens issue '["gyftietokens", "10.00000000 GFT", "memo"]' -p gyftietokens
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftietokens", "gyftieuser11"]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftietokens", "gyftieuser11", "idhash12345", "memo"]' -p gyftietokens
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "gyftieuser12"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "gyftieuser12", "idhash12345", "memo"]' -p gyftieuser11
+
+
+# Test 2
+cleos -u http://jungle2.cryptolions.io push action gyftietokens propose '["gyftieuser11", "Change token generation % to 40%"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens proposals
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens voteagainst '["gyftietokens", 0]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gyftietokens vote '["gyftieuser12", 0]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens configs
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "gyftieuser13"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "gyftieuser13", "idhash54321", "memo"]' -p gyftieuser11

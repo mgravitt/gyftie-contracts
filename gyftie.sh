@@ -28,9 +28,11 @@ cleos push action eosio.token issue '["holder1", "100000.0000 EOS", "memo"]' -p 
 
 cleos push action genesisgen setconfig '["0.10000000 GFT", 1.500000000000]' -p genesisgen
 cleos push action gyftietoken setconfig '["genesisgen", "gftorderbook"]' -p gyftietoken
+cleos push action gyftietoken setcounter '[0]' -p gyftietoken
+cleos push action gftorderbook setconfig '["gyftietoken", "eosio.token", "EOS", 4]' -p gftorderbook
+
 cleos push action gyftietoken create '[]' -p gyftietoken
 cleos push action gyftietoken issue '["gyftietoken", "8.00000000 GFT", "memo"]' -p gyftietoken
-
 
 cleos push action gyftietoken calcgyft '["gyftietoken", "holder1"]' -p gyftietoken
 cleos push action gyftietoken gyft '["gyftietoken", "holder1", "idhash12345"]' -p gyftietoken
@@ -41,35 +43,22 @@ cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345"]' -p ho
 cleos push action eosio.token transfer '["holder1", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder1
 cleos push action gyftietoken transfer '["holder2", "gftorderbook", "3.00000000 GFT", "memo"]' -p holder2
 
+cleos push action gyftietoken calcgyft '["holder2", "holder3"]' -p holder2
+cleos push action gyftietoken gyft '["holder2", "holder3", "idhash12345"]' -p holder2
 
+#cleos push action gftorderbook limitbuygft '["holder1", "1.0000 EOS", "0.05000000 GFT"]' -p holder1
+cleos push action gftorderbook limitsellgft '["holder2", "5.0000 EOS", "0.10000000 GFT"]' -p holder2
 
+cleos get table gyftietoken holder2 accounts
+cleos get table gftorderbook holder2 balances
 
-cleos push action gftorderbook limitbuygft '["holder1", "1.0000 EOS", "0.05000000 GFT"]' -p holder1
-cleos push action gftorderbook limitsellgft '["holder2", "5.0000 EOS", "0.00100000 GFT"]' -p holder2
+#########################
+
 
 cleos push action gftorderbook sellgft '[2, "holder2"]' -p holder2
-
-
-
-
-
 cleos push action gyftietoken marketselgft '["holder2", "2.00000000 GFT"]' -p holder2
-
-
 cleos push action eosio.token transfer '["holder1", "gftorderbook", "50000.0000 EOS", "memo"]' -p holder1
-
-
-
-
-
-
-
 cleos push action gyftietoken removeorders '[]' -p gyftietoken
-
-
-
-
-
 
 cleos push action gyftietoken calcgyft '["holder2", "holder3"]' -p holder2
 cleos push action gyftietoken gyft '["holder2", "holder3", "idhash54321", "memo"]' -p holder2
