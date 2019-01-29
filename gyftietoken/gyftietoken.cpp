@@ -197,7 +197,7 @@ ACTION gyftietoken::gyft (name from,
     action (
         permission_level{get_self(), "active"_n},
         get_self(), "issue"_n,
-        std::make_tuple(c.gyftie_foundation, issue_to_gyftee, to_gyftee_memo))
+        std::make_tuple(c.gyftie_foundation, issue_to_gyfter, to_gyfter_memo))
     .send();
 
     action (

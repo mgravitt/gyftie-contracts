@@ -46,16 +46,16 @@ ACTION genesisgen::generate (   name from,
     
         eosio_assert (gyfter_gft_balance <= (one_gyftie_token * 40), "Gyft feature is disabled for balances greater than 40 GFT.");
 
-        double gyft_benefit= 1.0;
+        double gyft_benefit= 0.0;
 
         if (gyfter_gft_balance  <= (one_gyftie_token * 10)) {
-            gyft_benefit = 1.1;
+            gyft_benefit = 0.1;
         } else if (gyfter_gft_balance  <= (one_gyftie_token * 20)) {
-            gyft_benefit = 1.05;
+            gyft_benefit = 0.05;
         } else if (gyfter_gft_balance  <= (one_gyftie_token * 30)) {
-            gyft_benefit = 1.02;
+            gyft_benefit = 0.02;
         } else if (gyfter_gft_balance  <= (one_gyftie_token * 40)) {
-            gyft_benefit = 1.01;
+            gyft_benefit = 0.01;
         } 
 
         //print ("    Gyft benefit    :   ", std::to_string(gyft_benefit).c_str(), "\n");
