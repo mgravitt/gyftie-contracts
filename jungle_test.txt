@@ -78,3 +78,23 @@ cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens confi
 
 cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "gyftieuser13"]' -p gyftieuser11
 cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "gyftieuser13", "idhash54321", "memo"]' -p gyftieuser11
+
+
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.1000 EOS", "0.20000000 GFT"]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.8000 EOS", "0.30000000 GFT"]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.4000 EOS", "0.20000000 GFT"]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "8.5000 EOS", "0.30000000 GFT"]' -p gyftieuser12
+
+
+cleos -u http://jungle2.cryptolions.io push action gyftietokens transfer '["gyftieuser11", "gftorderbook", "6.00000000 GFT", "memo"]' -p gyftieuser11 
+cleos -u http://jungle2.cryptolions.io push action eosio.token transfer '["gyftieuser11", "gftorderbook", "50.0000 EOS", "memo"]' -p gyftieuser11 
+
+
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitbuygft '["gyftieuser11", "6.2000 EOS", "0.03000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "6.1000 EOS", "0.02000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "6.0500 EOS", "0.10000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "5.9000 EOS", "0.08000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "5.8000 EOS", "0.02500000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "5.5000 EOS", "0.10000000 GFT"]' -p gyftieuser11
+

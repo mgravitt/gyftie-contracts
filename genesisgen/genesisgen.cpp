@@ -44,17 +44,21 @@ ACTION genesisgen::generate (   name from,
 
         asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, gyfter_gft_balance.symbol.precision())), gyfter_gft_balance.symbol};
     
-        eosio_assert (gyfter_gft_balance <= (one_gyftie_token * 40), "Gyft feature is disabled for balances greater than 40 GFT.");
+        // eosio_assert (gyfter_gft_balance <= (one_gyftie_token * 40), "Gyft feature is disabled for balances greater than 40 GFT.");
 
         double gyft_benefit= 0.0;
 
         if (gyfter_gft_balance  <= (one_gyftie_token * 10)) {
+            gyft_benefit = 0.3;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 100)) {
+            gyft_benefit = 0.2;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000)) {
             gyft_benefit = 0.1;
-        } else if (gyfter_gft_balance  <= (one_gyftie_token * 20)) {
-            gyft_benefit = 0.05;
-        } else if (gyfter_gft_balance  <= (one_gyftie_token * 30)) {
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 10000)) {
+            gyft_benefit = 0.03;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 100000)) {
             gyft_benefit = 0.02;
-        } else if (gyfter_gft_balance  <= (one_gyftie_token * 40)) {
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000000)) {
             gyft_benefit = 0.01;
         } 
 

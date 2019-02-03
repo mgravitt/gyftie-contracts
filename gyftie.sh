@@ -24,6 +24,9 @@ cleos set contract secondgen secondgen/
 cleos set contract eosio.token token/
 cleos set contract gftorderbook gftorderbook/
 
+
+#####
+
 cleos push action eosio.token create '["eosio.token", "1000000000.0000 EOS"]' -p eosio.token
 cleos push action eosio.token issue '["holder1", "100000.0000 EOS", "memo"]' -p eosio.token
 
@@ -91,7 +94,7 @@ cleos push action gftorderbook limitbuygft '["holder1", "1.5000 EOS", "0.1000000
 
 
 
-cleos push action gftorderbook marketbuy '["holder1", "0.30000000 GFT"]' -p holder1
+cleos push action gftorderbook marketbuy '["holder1", "4.5000 EOS"]' -p holder1
 
 cleos get table gyftietoken holder2 accounts
 cleos get table gftorderbook holder2 balances
