@@ -16,7 +16,7 @@ gyftieuser12
 gyftieuser13
 gygenesisgen
 gyfsecondgen
-
+gyftmultisig
 gygenesisge1
 
 
@@ -80,9 +80,11 @@ cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyft
 cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "gyftieuser13", "idhash54321", "memo"]' -p gyftieuser11
 
 
-cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser12
-cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.1000 EOS", "0.20000000 GFT"]' -p gyftieuser12
-cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.8000 EOS", "0.30000000 GFT"]' -p gyftieuser12
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "6.1000 EOS", "0.20000000 GFT"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "6.8000 EOS", "0.30000000 GFT"]' -p gyftieuser11
+
+
 cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "6.4000 EOS", "0.20000000 GFT"]' -p gyftieuser12
 cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser12", "8.5000 EOS", "0.30000000 GFT"]' -p gyftieuser12
 

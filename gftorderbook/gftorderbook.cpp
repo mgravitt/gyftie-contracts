@@ -12,9 +12,16 @@ ACTION gftorderbook::setconfig (name gyftiecontract,
     c.gyftiecontract = gyftiecontract;
     c.valid_counter_token_contract = valid_counter_token_contract;
     c.valid_counter_token_symbol = symbol{symbol_code(valid_counter_symbol_string.c_str()), valid_counter_symbol_precision};
+    c.paused = UNPAUSED;
     config.set (c, get_self());
 }
 
+ACTION gftorderbook::delconfig () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    config.remove();
+}
 ACTION gftorderbook::withdraw (name account)
 {
     require_auth (account);
@@ -43,18 +50,6 @@ ACTION gftorderbook::withdraw (name account)
         }
     }
 }
-
-// ACTION gftorderbook::clearbals (name account) 
-// {
-//     require_auth (account);
-//     balance_table bal_table (get_self(), account.value);
-//     auto b_itr = bal_table.begin();
-//     while (b_itr != bal_table.end()) {
-//         b_itr = bal_table.erase (b_itr);        
-//     }
-
-// }
-
 
 ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amount)
 {
@@ -110,11 +105,6 @@ ACTION gftorderbook::marketbuy (name buyer, asset eos_amount)
 
     if (remainder_to_spend.amount > 0) {
         marketbuy (buyer, remainder_to_spend);
-        //  action (
-        //     permission_level{buyer, "active"_n},
-        //     get_self(), "marketbuy"_n,
-        //     std::make_tuple(buyer, remainder_to_buy))
-        // .send();
     }    
 }
 
@@ -136,11 +126,6 @@ ACTION gftorderbook::marketsell (name seller, asset gft_amount)
 
     if (remainder_to_sell.amount > 0) {
         marketsell (seller, remainder_to_sell);
-        //  action (
-        //     permission_level{seller, "active"_n},
-        //     get_self(), "marketsell"_n,
-        //     std::make_tuple(seller, remainder_to_sell))
-        // .send();
     }    
 }
 
@@ -158,20 +143,15 @@ ACTION gftorderbook::processbook ()
         return;
     }
 
-    print ("Evaluating Orders\n");
-    print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
-    print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
-    print ("Sales Price: ", s_itr->price_per_gft, "\n");
-    print ("Buy Price: ", b_itr->price_per_gft, "\n");
+    // print ("Evaluating Orders\n");
+    // print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
+    // print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
+    // print ("Sales Price: ", s_itr->price_per_gft, "\n");
+    // print ("Buy Price: ", b_itr->price_per_gft, "\n");
 
     if (s_itr->price_per_gft <= b_itr->price_per_gft) {
         match_order (s_itr->order_id, b_itr->order_id);
         processbook ();
-        // action (
-        //     permission_level{get_self(), "active"_n},
-        //     get_self(), "processbook"_n,
-        //     std::make_tuple())
-        // .send();
     }
 }
 
@@ -214,14 +194,38 @@ ACTION gftorderbook::removeorders ()
     buyorder_table b_t (get_self(), get_self().value);
     auto b_itr = b_t.begin();
     while (b_itr != b_t.end()) {
-        b_itr = b_t.erase (b_itr);
+        delbuyorder (b_itr->order_id);
+        b_itr++;
     }
 
     sellorder_table s_t (get_self(), get_self().value);
     auto s_itr = s_t.begin();
     while (s_itr != s_t.end()) {
-        s_itr = s_t.erase (s_itr);
+        delsellorder (s_itr->order_id);
+        s_itr++;
     }
+}
+
+ACTION gftorderbook::admindelbo (uint64_t buyorder_id) 
+{
+    buyorder_table b_t (get_self(), get_self().value);
+    auto b_itr = b_t.find (buyorder_id);
+    eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
+
+    require_auth (get_self());
+
+    b_t.erase (b_itr);
+}
+
+ACTION gftorderbook::admindelso (uint64_t sellorder_id) 
+{
+    sellorder_table s_t (get_self(), get_self().value);
+    auto s_itr = s_t.find (sellorder_id);
+    eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
+
+    require_auth (get_self());
+
+    s_t.erase (s_itr);
 }
 
 ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
@@ -284,8 +288,8 @@ extern "C" {
         if (code == receiver) {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)
-                                                    (removeorders)(processbook)(withdraw)//(clearbals)
-                                                    (delbuyorder)(delsellorder))
+                                                    (removeorders)(processbook)(withdraw)(delconfig)
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo))
             }    
         }
         eosio_exit(0);

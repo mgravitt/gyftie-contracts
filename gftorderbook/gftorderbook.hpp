@@ -20,7 +20,9 @@ CONTRACT gftorderbook : public contract
                         name valid_counter_token_contract,
                         string valid_counter_symbol_string,
                         uint8_t valid_counter_symbol_precision);
-                        
+
+    ACTION delconfig ();
+
    ACTION removeorders () ;
 
    ACTION limitbuygft (name buyer, asset price_per_gft, asset gft_amount);
@@ -35,16 +37,13 @@ CONTRACT gftorderbook : public contract
 
    ACTION withdraw (name account);
 
-
-//    ACTION clearbals (name account);
-
-//    ACTION buygft (uint64_t sellorder_id, name buyer);
-
-//    ACTION sellgft (uint64_t buyorder_id, name seller);
-
    ACTION delbuyorder (uint64_t buyorder_id);
 
    ACTION delsellorder (uint64_t sellorder_id);
+
+   ACTION admindelbo (uint64_t buyorder_id);
+
+   ACTION admindelso (uint64_t sellorder_id);
 
    ACTION transrec (name from, name to, asset quantity, string memo);
 
@@ -53,12 +52,15 @@ CONTRACT gftorderbook : public contract
     const uint64_t SCALER = 1000000000;
     const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 8;
+    const uint8_t   PAUSED = 1;
+    const uint8_t   UNPAUSED = 0;
 
    TABLE Config
    {
        name         gyftiecontract;
        name         valid_counter_token_contract;
        symbol       valid_counter_token_symbol;
+       uint8_t     paused;
    };
 
    typedef singleton<"configs"_n, Config> config_table;
@@ -204,10 +206,10 @@ CONTRACT gftorderbook : public contract
 
         asset open_balance =  getopenbalance (account, min_balance.symbol);
 
-        print ("Confirming balance: ", account, "\n");
-        print ("Required balance: ", min_balance, "\n");
-        print ("Total balance: ", b_itr->funds, "\n");
-        print ("Open Balance: ", open_balance, "\n");
+        // print ("Confirming balance: ", account, "\n");
+        // print ("Required balance: ", min_balance, "\n");
+        // print ("Total balance: ", b_itr->funds, "\n");
+        // print ("Open Balance: ", open_balance, "\n");
 
         eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
@@ -229,11 +231,11 @@ CONTRACT gftorderbook : public contract
 
         confirm_balance (buyer, eos_amount);
       
-        print ("Executing order, ", std::to_string (sellorder_id).c_str(), "\n");
-        print ("Seller: ", s_itr->seller, "\n");
-        print ("Buyer: ", buyer, "\n");
-        print ("GFT Amount: ", get_gft_amount (s_itr->price_per_gft, trade_amount), "\n");
-        print ("EOS Amount: ", trade_amount, "\n");
+        // print ("Executing order, ", std::to_string (sellorder_id).c_str(), "\n");
+        // print ("Seller: ", s_itr->seller, "\n");
+        // print ("Buyer: ", buyer, "\n");
+        // print ("GFT Amount: ", get_gft_amount (s_itr->price_per_gft, trade_amount), "\n");
+        // print ("EOS Amount: ", trade_amount, "\n");
 
         sendfrombal (c.gyftiecontract, s_itr->seller, buyer, get_gft_amount (s_itr->price_per_gft, trade_amount), "Trade");
         sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, trade_amount, "Trade");
@@ -330,6 +332,7 @@ CONTRACT gftorderbook : public contract
 
         // NEED TO DECIDE HOW TO HANDLE DIFFERENCE BETWEEN BUYING AND SELLING PRICE
         asset price = b_itr->price_per_gft;
+        //DEPLOY
         if (s_itr->created_date < b_itr->created_date) {
             price = s_itr->price_per_gft;
         }
@@ -340,23 +343,23 @@ CONTRACT gftorderbook : public contract
         if (b_itr->gft_amount == s_itr->gft_amount) {
             s_t.erase (s_itr);
             b_t.erase (b_itr);
-            print ("Closing buy order: ", b_itr->order_id, "\n");
-            print ("Closing sell order: ", s_itr->order_id, "\n");
+            // print ("Closing buy order: ", b_itr->order_id, "\n");
+            // print ("Closing sell order: ", s_itr->order_id, "\n");
         } else if (b_itr->gft_amount > s_itr->gft_amount) {
-            print ("Decrementing amount on buy order ", b_itr->order_id, " to ", b_itr->gft_amount - s_itr->gft_amount, "\n");
+            // print ("Decrementing amount on buy order ", b_itr->order_id, " to ", b_itr->gft_amount - s_itr->gft_amount, "\n");
             b_t.modify (b_itr, get_self(), [&](auto &b) {
                 b.gft_amount -= s_itr->gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
-            print ("Closing sell order: ", s_itr->order_id, "\n");
+            // print ("Closing sell order: ", s_itr->order_id, "\n");
             s_t.erase (s_itr);
         } else if (s_itr->gft_amount > b_itr->gft_amount) {
-            print ("Decrementing amount on sell order ", s_itr->order_id, " to ", s_itr->gft_amount - b_itr->gft_amount, "\n");
+            // print ("Decrementing amount on sell order ", s_itr->order_id, " to ", s_itr->gft_amount - b_itr->gft_amount, "\n");
              s_t.modify (s_itr, get_self(), [&](auto &s) {
                 s.gft_amount -= b_itr->gft_amount;
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
-            print ("Closing buy order: ", b_itr->order_id, "\n");
+            // print ("Closing buy order: ", b_itr->order_id, "\n");
             b_t.erase (b_itr);
         }
     }
