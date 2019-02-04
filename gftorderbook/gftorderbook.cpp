@@ -12,50 +12,66 @@ ACTION gftorderbook::setconfig (name gyftiecontract,
     c.gyftiecontract = gyftiecontract;
     c.valid_counter_token_contract = valid_counter_token_contract;
     c.valid_counter_token_symbol = symbol{symbol_code(valid_counter_symbol_string.c_str()), valid_counter_symbol_precision};
+    c.paused = UNPAUSED;
     config.set (c, get_self());
 }
 
+ACTION gftorderbook::delconfig () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    config.remove();
+}
+ACTION gftorderbook::withdraw (name account)
+{
+    require_auth (account);
+
+    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    balance_table b_t (get_self(), account.value);
+    auto b_itr = b_t.find (gft_symbol.code().raw());
+
+    if (b_itr != b_t.end()) {
+        asset open_gft_balance = getopenbalance (account, gft_symbol);
+        asset withdraw_gft_balance = b_itr->funds - open_gft_balance;
+        if (withdraw_gft_balance.amount > 0) {
+            sendfrombal (b_itr->token_contract, account, account, withdraw_gft_balance, "Withdrawal from GFT Order Book");
+        }
+    }
+
+    b_itr = b_t.find (c.valid_counter_token_symbol.code().raw());
+    if (b_itr != b_t.end()) {
+        asset open_counter_balance = getopenbalance (account, c.valid_counter_token_symbol);
+        asset withdraw_counter_balance = b_itr->funds - open_counter_balance;
+        if (withdraw_counter_balance.amount > 0) {
+            sendfrombal (b_itr->token_contract, account, account, withdraw_counter_balance, "Withdrawal from GFT Order Book");
+        }
+    }
+}
 
 ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amount)
 {
     require_auth (buyer);
+    confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
 
-    print ("GFT Amount Asset: ", gft_amount, "\n");
-    print ("GFT Amount Asset Amount: ", std::to_string(gft_amount.amount).c_str(), "\n");
-
-    uint64_t gft_quantity = SCALER * gft_amount.amount / pow(10,gft_amount.symbol.precision());
-    print ("GFT Quantity: ", std::to_string (gft_quantity).c_str(), "\n");
-
-   // uint64_t scaled_gft_qty = gft_quantity * SCALER;
-   // print ("Scaled GFT Quantity: ", std::to_string (scaled_gft_qty).c_str(), "\n");
-
-    asset funds_needed = price_per_gft * gft_quantity / SCALER;
-    print ("Funds needed for order: ", funds_needed, "\n");
-
-    confirm_balance (buyer, funds_needed);
-    
     buyorder_table b_t (get_self(), get_self().value);
     b_t.emplace (get_self(), [&](auto &b) {
         b.order_id = b_t.available_primary_key();
         b.buyer = buyer;
         b.price_per_gft = price_per_gft;
         b.gft_amount = gft_amount;
-        b.order_value = funds_needed;
+        b.order_value = get_eos_order_value(price_per_gft, gft_amount);
+        b.created_date = now();
     });
+
+    processbook ();
 }
 
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
     require_auth (seller);
-
-    uint64_t gft_quantity = SCALER * gft_amount.amount / pow(10,gft_amount.symbol.precision());
-    print ("GFT Quantity: ", std::to_string (gft_quantity).c_str(), "\n");
-
-    // uint64_t scaled_gft_qty = gft_quantity * SCALER;
-    // print ("Scaled GFT Quantity: ", std::to_string (scaled_gft_qty).c_str(), "\n");
-
-    asset order_value = price_per_gft * gft_quantity / SCALER;
-    print ("Order value: ", order_value, "\n");
 
     confirm_balance (seller, gft_amount);
     
@@ -65,42 +81,78 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
         s.seller = seller;
         s.price_per_gft = price_per_gft;
         s.gft_amount = gft_amount;
-        s.order_value = order_value;
+        s.order_value = get_eos_order_value (price_per_gft, gft_amount);
+        s.created_date = now();
     });
+
+    processbook ();
 }
 
-ACTION gftorderbook::buygft (uint64_t sellorder_id, name buyer) 
+ACTION gftorderbook::marketbuy (name buyer, asset eos_amount) 
 {
     require_auth (buyer);
 
     sellorder_table s_t (get_self(), get_self().value);
-    auto s_itr = s_t.find (sellorder_id);
-    eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
+    auto s_index = s_t.get_index<"byprice"_n>();
+    auto s_itr = s_index.begin ();
+    if (s_itr == s_index.end()) {
+        return;
+    }
 
-    config_table config (get_self(), get_self().value);
-    auto c = config.get();
+    asset remainder_to_spend = eos_amount - s_itr->order_value;
+    
+    buygft (s_itr->order_id, buyer, eos_amount);
 
-    sendfrombal (c.gyftiecontract, s_itr->seller, buyer, s_itr->gft_amount, "Trade");
-    sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, s_itr->order_value, "Trade");
-
-    s_t.erase (s_itr);
+    if (remainder_to_spend.amount > 0) {
+        marketbuy (buyer, remainder_to_spend);
+    }    
 }
 
-ACTION gftorderbook::sellgft (uint64_t buyorder_id, name seller) 
+ACTION gftorderbook::marketsell (name seller, asset gft_amount) 
 {
     require_auth (seller);
 
     buyorder_table b_t (get_self(), get_self().value);
-    auto b_itr = b_t.find (buyorder_id);
-    eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
+    auto b_index = b_t.get_index<"byprice"_n>();
+    auto b_itr = b_index.rbegin();
 
-    config_table config (get_self(), get_self().value);
-    auto c = config.get();
+    if (b_itr == b_index.rend()) {
+        return;
+    }
 
-    sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, b_itr->order_value, "Trade");
-    sendfrombal (c.gyftiecontract, seller, b_itr->buyer, b_itr->gft_amount, "Trade");
+    asset remainder_to_sell = gft_amount - b_itr->gft_amount;
+    
+    sellgft (b_itr->order_id, seller, gft_amount);
 
-    b_t.erase (b_itr);
+    if (remainder_to_sell.amount > 0) {
+        marketsell (seller, remainder_to_sell);
+    }    
+}
+
+ACTION gftorderbook::processbook () 
+{
+    sellorder_table s_t (get_self(), get_self().value);
+    auto s_index = s_t.get_index<"byprice"_n>();
+    auto s_itr = s_index.begin ();
+
+    buyorder_table b_t (get_self(), get_self().value);
+    auto b_index = b_t.get_index<"byprice"_n>();
+    auto b_itr = b_index.rbegin();
+
+    if (s_itr == s_index.end() || b_itr == b_index.rend()) {
+        return;
+    }
+
+    // print ("Evaluating Orders\n");
+    // print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
+    // print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
+    // print ("Sales Price: ", s_itr->price_per_gft, "\n");
+    // print ("Buy Price: ", b_itr->price_per_gft, "\n");
+
+    if (s_itr->price_per_gft <= b_itr->price_per_gft) {
+        match_order (s_itr->order_id, b_itr->order_id);
+        processbook ();
+    }
 }
 
 ACTION gftorderbook::delbuyorder (uint64_t buyorder_id) 
@@ -142,14 +194,38 @@ ACTION gftorderbook::removeorders ()
     buyorder_table b_t (get_self(), get_self().value);
     auto b_itr = b_t.begin();
     while (b_itr != b_t.end()) {
-        b_itr = b_t.erase (b_itr);
+        delbuyorder (b_itr->order_id);
+        b_itr++;
     }
 
     sellorder_table s_t (get_self(), get_self().value);
     auto s_itr = s_t.begin();
     while (s_itr != s_t.end()) {
-        s_itr = s_t.erase (s_itr);
+        delsellorder (s_itr->order_id);
+        s_itr++;
     }
+}
+
+ACTION gftorderbook::admindelbo (uint64_t buyorder_id) 
+{
+    buyorder_table b_t (get_self(), get_self().value);
+    auto b_itr = b_t.find (buyorder_id);
+    eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
+
+    require_auth (get_self());
+
+    b_t.erase (b_itr);
+}
+
+ACTION gftorderbook::admindelso (uint64_t sellorder_id) 
+{
+    sellorder_table s_t (get_self(), get_self().value);
+    auto s_itr = s_t.find (sellorder_id);
+    eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
+
+    require_auth (get_self());
+
+    s_t.erase (s_itr);
 }
 
 ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
@@ -211,9 +287,9 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(buygft)
-                                                    (sellgft)(removeorders)
-                                                    (delbuyorder)(delsellorder))
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo))
             }    
         }
         eosio_exit(0);
