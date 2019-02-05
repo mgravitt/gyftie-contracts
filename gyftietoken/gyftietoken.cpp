@@ -148,6 +148,22 @@ ACTION gyftietoken::voteagainst (name voter,
     });
 }
 
+ACTION gyftietoken::addgyft (name gyfter, name gyftee, asset gyfter_issue,
+                                asset gyftee_issue) 
+{
+    // require_auth (get_self());
+
+    // gyft_table g_t (get_self(), get_self().value);
+    // g_t.emplace (get_self(), [&](auto &g) {
+    //     g.gyft_id   = g_t.available_primary_key();
+    //     g.gyfter = gyfter;
+    //     g.gyftee = gyftee;
+    //     g.gyfter_issue = gyfter_issue;
+    //     g.gyftee_issue = gyftee_issue;
+    //     g.gyft_date = now();
+    // });
+}
+
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
     require_auth (from);
@@ -182,8 +198,13 @@ ACTION gyftietoken::gyft (name from,
     eosio_assert (t_itr->from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
     eosio_assert (t_itr->to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
    
+    
+
     asset issue_to_gyfter = t_itr->generated_amount;
-    asset issue_to_gyftee = getgftbalance (from);
+
+    asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t_itr->generated_amount.symbol.precision())), t_itr->generated_amount.symbol};
+
+    asset issue_to_gyftee = one_gyftie_token * 10; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };
@@ -197,7 +218,7 @@ ACTION gyftietoken::gyft (name from,
     action (
         permission_level{get_self(), "active"_n},
         get_self(), "issue"_n,
-        std::make_tuple(c.gyftie_foundation, issue_to_gyftee, to_gyftee_memo))
+        std::make_tuple(c.gyftie_foundation, issue_to_gyfter + issue_to_gyftee, to_gyfter_memo))
     .send();
 
     action (
@@ -205,6 +226,8 @@ ACTION gyftietoken::gyft (name from,
         get_self(), "issue"_n,
         std::make_tuple(to, issue_to_gyftee, to_gyftee_memo))
     .send();
+
+    addgyft (from, to, issue_to_gyfter, issue_to_gyftee);
 }
 
 ACTION gyftietoken::create()
@@ -337,6 +360,6 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 }
 
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(addgyft)
                             (gyft)(propose)(votefor)(voteagainst)(reset)
                             (burnall)(removeprop)(setcounter))

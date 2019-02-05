@@ -30,6 +30,9 @@ CONTRACT gyftietoken : public contract
     
     ACTION gyft (name from, name to, string idhash);
 
+    ACTION addgyft (name gyfter, name gyftee, asset gyfter_issue,
+                                asset gyftee_issue);
+
     ACTION propose (name proposer, string notes);
 
     ACTION votefor (name voter, uint64_t   proposal_id);
@@ -103,6 +106,19 @@ CONTRACT gyftietoken : public contract
         string  idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
+
+    // TABLE gyft 
+    // {
+    //     uint64_t    gyft_id;
+    //     name        gyfter;
+    //     name        gyftee;
+    //     asset       gyfter_issue;
+    //     asset       gyftee_issue;
+    //     uint32_t    gyft_date;
+    //     uint64_t    primary_key() const { return gyft_id; }
+    // };
+
+    // typedef eosio::multi_index<"gyfts"_n, gyft> gyft_table;
 
     TABLE currency_stats
     {
