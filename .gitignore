@@ -9,3 +9,4 @@ client/dist
 client/node_modules
 tools/node_modules
 gyftie-mainnet
+**/node_modules
