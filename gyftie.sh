@@ -30,10 +30,11 @@ cleos set contract gftorderbook gftorderbook/
 cleos push action eosio.token create '["eosio.token", "1000000000.0000 EOS"]' -p eosio.token
 cleos push action eosio.token issue '["holder1", "100000.0000 EOS", "memo"]' -p eosio.token
 
-cleos push action genesisgen setconfig '["0.10000000 GFT", 1.500000000000]' -p genesisgen
 cleos push action gyftietoken setconfig '["genesisgen", "gftorderbook","gyftiegyftie"]' -p gyftietoken
 cleos push action gyftietoken setcounter '[0]' -p gyftietoken
+cleos push action gyftietoken unpause '[0]' -p gyftietoken
 cleos push action gftorderbook setconfig '["gyftietoken", "eosio.token", "EOS", 4]' -p gftorderbook
+cleos push action gftorderbook unpause '[]' -p gftorderbook
 
 cleos push action gyftietoken create '[]' -p gyftietoken
 cleos push action gyftietoken issue '["gyftietoken", "8.00000000 GFT", "memo"]' -p gyftietoken

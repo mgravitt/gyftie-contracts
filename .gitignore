@@ -11,3 +11,4 @@ client/node_modules
 tools/node_modules
 gyftie-mainnet
 **/node_modules
+trx.json

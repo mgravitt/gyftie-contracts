@@ -47,6 +47,9 @@ CONTRACT gftorderbook : public contract
 
    ACTION transrec (name from, name to, asset quantity, string memo);
 
+   ACTION pause ();
+   ACTION unpause ();
+
   private:
 
     const uint64_t SCALER = 1000000000;
@@ -117,6 +120,11 @@ CONTRACT gftorderbook : public contract
 
     bool is_paused () 
     {
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        if (c.paused == PAUSED) {
+            return true;
+        }
         return false;
     }
 

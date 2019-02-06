@@ -12,7 +12,7 @@ ACTION gftorderbook::setconfig (name gyftiecontract,
     c.gyftiecontract = gyftiecontract;
     c.valid_counter_token_contract = valid_counter_token_contract;
     c.valid_counter_token_symbol = symbol{symbol_code(valid_counter_symbol_string.c_str()), valid_counter_symbol_precision};
-    c.paused = UNPAUSED;
+    c.paused = PAUSED;
     config.set (c, get_self());
 }
 
@@ -22,6 +22,25 @@ ACTION gftorderbook::delconfig ()
     config_table config (get_self(), get_self().value);
     config.remove();
 }
+
+ACTION gftorderbook::pause () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();
+    c.paused = PAUSED;
+    config.set (c, get_self());
+}
+
+ACTION gftorderbook::unpause () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();
+    c.paused = UNPAUSED;
+    config.set (c, get_self());
+}
+
 ACTION gftorderbook::withdraw (name account)
 {
     require_auth (account);
@@ -72,7 +91,6 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
     require_auth (seller);
-
     confirm_balance (seller, gft_amount);
     
     sellorder_table s_t (get_self(), get_self().value);
@@ -288,7 +306,7 @@ extern "C" {
         if (code == receiver) {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)
-                                                    (removeorders)(processbook)(withdraw)(delconfig)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo))
             }    
         }

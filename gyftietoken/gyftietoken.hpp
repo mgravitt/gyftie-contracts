@@ -39,26 +39,28 @@ CONTRACT gyftietoken : public contract
 
     ACTION voteagainst (name voter, uint64_t   proposal_id);
 
-    // TESTING ONLY -- DELETE FOR PRODUCTION
-    ACTION reset () ;
-
-    // TESTING ONLY -- DELETE FOR PRODUCTION
-    ACTION burnall (name tokenholder);
-
     ACTION removeprop (uint64_t proposal_id);
 
     ACTION setcounter (uint64_t account_count);
+
+    ACTION pause ();
+
+    ACTION unpause ();
 
   private:
 
     const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 8;
 
+    const uint8_t   PAUSED = 1;
+    const uint8_t   UNPAUSED = 0;
+
     TABLE Config
     {
         name        token_gen;
         name        gftorderbook;
         name        gyftie_foundation;
+        uint8_t     paused;
     };
 
     typedef singleton<"configs"_n, Config> config_table;
@@ -91,14 +93,13 @@ CONTRACT gyftietoken : public contract
 
     TABLE tokengen
     {
-        uint64_t    pk;
         name        from;
         name        to;
         asset       generated_amount;        
-        uint64_t    primary_key() const { return pk; }
     };
 
-    typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table;
+    typedef singleton<"tokengens"_n, tokengen> tokengen_table;
+    typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table_placeholder;
     
     TABLE account
     {
@@ -184,6 +185,11 @@ CONTRACT gyftietoken : public contract
 
     bool is_paused () 
     {
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        if (c.paused == PAUSED) {
+            return true;
+        }
         return false;
     }
 
@@ -205,14 +211,6 @@ CONTRACT gyftietoken : public contract
         c.account_count++;
         counter.set (c, get_self());
     }
-
-    // void decrement_account_count () 
-    // {
-    //     counter_table counter (get_self(), get_self().value);
-    //     auto c = config.get();
-    //     c.account_count--;
-    //     config.set (c, get_self());
-    // }
 
     void save_idhash (const name account, const string idhash) 
     {
@@ -252,8 +250,6 @@ CONTRACT gyftietoken : public contract
         if (b_itr != b_t.end() && b_itr->token_contract == get_self()) {
             gft_balance += b_itr->funds;
         }
-
-        //print (" GFT Balance: ", gft_balance, "\n");
         
         return gft_balance;
     }

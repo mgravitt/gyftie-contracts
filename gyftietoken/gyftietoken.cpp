@@ -11,6 +11,25 @@ ACTION gyftietoken::setconfig (name token_gen,
     c.token_gen = token_gen;
     c.gftorderbook = gftorderbook;
     c.gyftie_foundation = gyftie_foundation;
+    c.paused = PAUSED;
+    config.set (c, get_self());
+}
+
+ACTION gyftietoken::pause () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();
+    c.paused = PAUSED;
+    config.set (c, get_self());
+}
+
+ACTION gyftietoken::unpause () 
+{
+    require_auth (get_self());
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();
+    c.paused = UNPAUSED;
     config.set (c, get_self());
 }
 
@@ -31,38 +50,6 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
-// TESTING ONLY -- DELETE FOR PRODUCTION
-ACTION gyftietoken::reset () 
-{
-    require_auth (get_self());
-
-    delconfig();
-
-    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-
-    stats s_t(_self, sym.code().raw());
-    auto s_itr = s_t.find(sym.code().raw());
-    s_t.erase (s_itr);
-
-    proposal_table p_t (get_self(), get_self().value);
-    auto p_itr = p_t.begin();
-    while (p_itr != p_t.end()) {
-        p_itr = p_t.erase (p_itr);
-    }
-}
-
-// TESTING ONLY -- DELETE FOR PRODUCTION
-ACTION gyftietoken::burnall (name tokenholder) 
-{
-    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-
-    accounts a_t (get_self(), tokenholder.value);
-    auto a_itr = a_t.find (sym.code().raw());
-    eosio_assert (a_itr != a_t.end(), "Gyfter does not have a GYFTIE balance.");
-
-    a_t.erase (a_itr);
-}
-
 ACTION gyftietoken::removeprop (uint64_t proposal_id) 
 {
     require_auth (get_self());
@@ -74,9 +61,9 @@ ACTION gyftietoken::removeprop (uint64_t proposal_id)
 }
 
 ACTION gyftietoken::propose (name proposer,
-                               // name token_gen,
                                 string notes) 
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
     require_auth (proposer);
     eosio_assert (is_tokenholder (proposer), "Proposer is not a GFT token holder.");
 
@@ -97,6 +84,8 @@ ACTION gyftietoken::propose (name proposer,
 ACTION gyftietoken::votefor (name voter,
                             uint64_t proposal_id) 
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
+
     require_auth (voter);
     eosio_assert (is_tokenholder (voter), "Voter is not a GFT token holder.");
     
@@ -129,6 +118,8 @@ ACTION gyftietoken::votefor (name voter,
 ACTION gyftietoken::voteagainst (name voter,
                             uint64_t proposal_id) 
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
+
     require_auth (voter);
     eosio_assert (is_tokenholder (voter), "Voter is not a GFT token holder.");
     
@@ -166,6 +157,8 @@ ACTION gyftietoken::addgyft (name gyfter, name gyftee, asset gyfter_issue,
 
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
+
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
 
@@ -183,6 +176,8 @@ ACTION gyftietoken::gyft (name from,
                             name to, 
                             string idhash) 
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
+
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
     eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
@@ -193,17 +188,12 @@ ACTION gyftietoken::gyft (name from,
     auto c = config.get();
 
     tokengen_table t_t (c.token_gen, c.token_gen.value);
-    auto t_itr = t_t.begin();
-    eosio_assert (t_itr != t_t.end(), "Token generation amount not found.");
-    eosio_assert (t_itr->from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
-    eosio_assert (t_itr->to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
-   
-    
-
-    asset issue_to_gyfter = t_itr->generated_amount;
-
-    asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t_itr->generated_amount.symbol.precision())), t_itr->generated_amount.symbol};
-
+    tokengen t = t_t.get();
+    eosio_assert (t.from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
+    eosio_assert (t.to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
+ 
+    asset issue_to_gyfter = t.generated_amount;
+    asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
     asset issue_to_gyftee = one_gyftie_token * 10; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
@@ -284,6 +274,8 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
 
 ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
 {
+    eosio_assert (! is_paused(), "Contract is paused." );
+
     eosio_assert(from != to, "cannot transfer to self");
     require_auth(from);
     eosio_assert(is_account(to), "to account does not exist");
@@ -325,10 +317,6 @@ void gyftietoken::sub_balance(name owner, asset value)
 
     from_acnts.modify(from, owner, [&](auto &a) {
         a.balance -= value;
-
-        // if (a.balance.amount == 0 && st.issuer != owner){
-        //     decrement_account_count();
-        // }
     });
 }
 
@@ -361,5 +349,5 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(addgyft)
-                            (gyft)(propose)(votefor)(voteagainst)(reset)
-                            (burnall)(removeprop)(setcounter))
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)
+                            (removeprop)(setcounter))

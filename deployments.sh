@@ -41,3 +41,33 @@ cleos -u https://eos.greymass.com push action gftorderbook setconfig '["gyftieto
 #cleos -u https://eos.greymass.com push action gyftietokens setconfig '["gyftietokgen", "gftorderbook", "gyftiegyftie"]' -p gyftietokens
 cleos -u https://eos.greymass.com push action gyftietokens setcounter '[15]' -p gyftietokens
 
+
+
+######
+
+
+cleos -u https://eos.greymass.com set account permission gyftietokgen active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1},{"permission":{"actor":"gyftietokgen","permission":"eosio.code"},"weight":1}],"waits":[]}' owner -p gyftietokgen@owner
+
+
+
+
+######
+
+# INTO MAINTENANCE
+cleos -u https://eos.greymass.com push action gyftietokens pause '[]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gftorderbook pause '[]' -p gftorderbook
+
+#cleos -u https://eos.greymass.com push action gyftietokens delconfig '[]' -p gyftietokens
+cleos -u https://eos.greymass.com set contract gyftietokens gyftietoken/
+cleos -u https://eos.greymass.com set contract gftorderbook gftorderbook/
+
+#cleos -u https://eos.greymass.com push action gyftietokens setconfig '["gyftietokgen", "gftorderbook", "gyftiegyftie"]' -p gyftietokens
+
+cleos -u https://eos.greymass.com push action gyftietokgen reset '[]' -p gyftietokgen
+cleos -u https://eos.greymass.com set contract gyftietokgen genesisgen/
+
+
+cleos -u https://eos.greymass.com push action gyftietokens unpause '[]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gftorderbook unpause '[]' -p gftorderbook
+
+# OUT OF MAINTENANCE

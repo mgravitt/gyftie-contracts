@@ -48,7 +48,9 @@ cleos -u http://jungle2.cryptolions.io set contract gftorderbook gftorderbook/
 cleos -u http://jungle2.cryptolions.io push action gygenesisge1 setconfig '["0.20000000 GFT", 1.500000000000]' -p gygenesisge1
 cleos -u http://jungle2.cryptolions.io push action gyftietokens setconfig '["gygenesisge1", "gftorderbook", "gyftiegyftie"]' -p gyftietokens
 cleos -u http://jungle2.cryptolions.io push action gyftietokens setcounter '[0]' -p gyftietokens
+cleos -u http://jungle2.cryptolions.io push action gftorderbook delconfig '[]' -p gftorderbook
 cleos -u http://jungle2.cryptolions.io push action gftorderbook setconfig '["gyftietokens", "eosio.token", "EOS", 4]' -p gftorderbook
+cleos -u http://jungle2.cryptolions.io push action gyftietokens unpause '[]' -p gyftietokens
 
 
 
@@ -76,8 +78,8 @@ cleos -u http://jungle2.cryptolions.io push action gyftietokens voteagainst '["g
 cleos -u http://jungle2.cryptolions.io push action gyftietokens vote '["gyftieuser12", 0]' -p gyftieuser12
 cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens configs
 
-cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "gyftieuser13"]' -p gyftieuser11
-cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "gyftieuser13", "idhash54321", "memo"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "bitcarbonpa2"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "bitcarbonpa2", "idhash54321", "memo"]' -p gyftieuser11
 
 
 cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser11
@@ -100,3 +102,26 @@ cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["
 cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "5.8000 EOS", "0.02500000 GFT"]' -p gyftieuser11
 cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["gyftieuser11", "5.5000 EOS", "0.10000000 GFT"]' -p gyftieuser11
 
+cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["bitcarbonpa1", "bitcarbonpa2", "sendtorec4", "Send tokens", "github link"]' -p bitcarbonpa1
+
+
+gyftietokens: 50
+gftorderbook: 45
+gyftietokgen: 21
+danielflora3: 60
+gyftmultisig: 15
+
+
+
+cleos -u https://jungle2.cryptolions.io:443 set account permission gygenesisge1 owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gygenesisge1","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gygenesisge1@owner
+cleos -u https://jungle2.cryptolions.io:443 set account permission gygenesisge1 active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"bitcarbonpa1","permission":"active"},"weight":1},{"permission":{"actor":"bitcarbonpa2","permission":"active"},"weight":1}],"waits":[]}' owner -p gygenesisge1@owner
+
+
+cleos -u http://jungle2.cryptolions.io set contract -sjd -x 86400 gygenesisge1 genesisgen/ > trx.json
+cleos -u https://jungle2.cryptolions.io:443 multisig propose_trx updcontract '[{"actor": "bitcarbonpa1", "permission": "active"}, {"actor": "bitcarbonpa2", "permission": "active"}]' '[{"actor": "bcdetreasury", "permission": "active"}]'  bitcarbontok transfer '{"from":"bcdetreasury", "to":"bitreceiver1", "quantity":"25.0000 BCDE", "memo":"Multisig Test"}' -p bitcarbonpa1@active
+cleos -u https://jungle2.cryptolions.io:443 multisig review bitcarbonpa1 updcontract
+
+cleos -u https://jungle2.cryptolions.io:443 multisig approve bitcarbonpa1 updcontract '{"actor": "bitcarbonpa1", "permission": "active"}' -p bitcarbonpa1
+cleos -u https://jungle2.cryptolions.io:443 multisig exec bitcarbonpa1 updcontract -p bitcabuser11
+
+cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["bitcarbonpa1", "bitcarbonpa2", "updcontract", "Update contract", "github link"]' -p bitcarbonpa1
