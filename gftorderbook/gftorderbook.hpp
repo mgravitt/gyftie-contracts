@@ -29,6 +29,8 @@ CONTRACT gftorderbook : public contract
 
    ACTION limitsellgft (name seller, asset price_per_gft, asset gft_amount);
 
+    ACTION stack (name account, asset gft_amount, asset eos_amount);
+
    ACTION marketbuy (name buyer, asset eos_amount);
 
    ACTION marketsell (name seller, asset gft_amount);
@@ -52,7 +54,7 @@ CONTRACT gftorderbook : public contract
 
   private:
 
-    const uint64_t SCALER = 1000000000;
+    const uint64_t SCALER = 1000000;
     const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 8;
     const uint8_t   PAUSED = 1;
@@ -180,31 +182,52 @@ CONTRACT gftorderbook : public contract
 
     asset getopenbalance (name account, symbol sym)
     {
-        buyorder_table b_t (get_self(), get_self().value);
-        auto b_index = b_t.get_index<"bybuyer"_n>();
-        auto b_itr = b_index.find (account.value);
-
         asset total_orders = asset {0, sym};
+    
+        symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
-        while (b_itr != b_index.end() && b_itr->buyer == account) {
-            if (b_itr->order_value.symbol == sym) {
-                total_orders += b_itr->order_value;
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        
+        if (sym == gft_symbol) {
+            sellorder_table s_t (get_self(), get_self().value);
+            auto s_index = s_t.get_index<"byseller"_n>();
+            auto s_itr = s_index.find (account.value);
+
+            while (s_itr != s_index.end() && s_itr->seller == account) {
+                if (s_itr->gft_amount.symbol == sym) {
+                    total_orders += s_itr->gft_amount;
+                }
+                s_itr++;
             }
-            b_itr++;
+        } else if (sym == c.valid_counter_token_symbol) {
+            buyorder_table b_t (get_self(), get_self().value);
+            auto b_index = b_t.get_index<"bybuyer"_n>();
+            auto b_itr = b_index.find (account.value);
+            while (b_itr != b_index.end() && b_itr->buyer == account) {
+                if (b_itr->order_value.symbol == sym) {
+                    total_orders += b_itr->order_value;
+                }
+                b_itr++;
+            }            
         }
-
-        sellorder_table s_t (get_self(), get_self().value);
-        auto s_index = s_t.get_index<"byseller"_n>();
-        auto s_itr = s_index.find (account.value);
-
-        while (s_itr != s_index.end() && s_itr->seller == account) {
-            if (s_itr->gft_amount.symbol == sym) {
-                total_orders += s_itr->gft_amount;
-            }
-            s_itr++;
-        }
-
+        print (" Total Orders: ", total_orders, "\n");
         return total_orders;
+    }
+
+    asset get_market_price () 
+    {
+        buyorder_table b_t (get_self(), get_self().value);
+        auto b_index = b_t.get_index<"byprice"_n>();
+        auto b_itr = b_index.rbegin();
+
+        eosio_assert (b_itr != b_index.rend(), "No open buy orders; market price cannot be determined.");
+        return b_itr->price_per_gft;
+    }
+
+    asset adjust_asset (asset original_asset, float adjustment)
+    {
+        return asset { static_cast<int64_t> (original_asset.amount * adjustment), original_asset.symbol };
     }
 
     void confirm_balance (name account, asset min_balance) 
@@ -214,10 +237,10 @@ CONTRACT gftorderbook : public contract
 
         asset open_balance =  getopenbalance (account, min_balance.symbol);
 
-        // print ("Confirming balance: ", account, "\n");
-        // print ("Required balance: ", min_balance, "\n");
-        // print ("Total balance: ", b_itr->funds, "\n");
-        // print ("Open Balance: ", open_balance, "\n");
+        print ("Confirming balance: ", account, "\n");
+        print ("Required balance: ", min_balance, "\n");
+        print ("Total balance: ", b_itr->funds, "\n");
+        print ("Open Balance: ", open_balance, "\n");
 
         eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
@@ -290,8 +313,11 @@ CONTRACT gftorderbook : public contract
 
     asset get_eos_order_value (asset price_per_gft, asset gft_amount) 
     {
-        uint64_t gft_quantity = SCALER * gft_amount.amount / pow(10,gft_amount.symbol.precision());
-        return price_per_gft * gft_quantity / SCALER;
+        uint64_t gft_quantity = gft_amount.amount; // / pow(10,gft_amount.symbol.precision());
+        print (" inside get order value, gft_amount: ", gft_amount, "\n");
+        print (" inside get order value: gft_quantity: ", gft_quantity, "\n");
+        print (" inside get order value: price * gft qty: ", price_per_gft * gft_quantity / pow(10,GYFTIE_PRECISION), "\n");
+        return price_per_gft * gft_quantity / pow(10,GYFTIE_PRECISION);
     }
 
     asset get_gft_amount (asset price_per_gft, asset eos_amount)
@@ -320,6 +346,9 @@ CONTRACT gftorderbook : public contract
 
     void match_order (uint64_t sellorder_id, uint64_t buyorder_id)
     {
+
+        print ("\n\n found a mathcing order \n\n");
+
         // handle trade between two orders, decrementally the lower of the two appropriately
         sellorder_table s_t (get_self(), get_self().value);
         auto s_itr = s_t.find (sellorder_id);
