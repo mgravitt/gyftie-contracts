@@ -78,10 +78,8 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
     print (" price per gft: ", price_per_gft, "\n");
     print (" gft amount : ", gft_amount, "\n");
     print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n" );
-    
-    confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
 
-    
+    confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
 
     buyorder_table b_t (get_self(), get_self().value);
     b_t.emplace (get_self(), [&](auto &b) {

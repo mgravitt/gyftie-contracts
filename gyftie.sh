@@ -50,7 +50,7 @@ cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345"]' -p ho
 cleos push action eosio.token transfer '["holder1", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder1
 cleos push action gyftietoken transfer '["holder1", "gftorderbook", "6.30000000 GFT", "memo"]' -p holder1
 cleos push action gftorderbook limitbuygft '["holder1", "6.2000 EOS", "0.03000000 GFT"]' -p holder1
-cleos push action gftorderbook stack '["holder1", "6.00000000 GFT", "10000.0000 EOS"]' -p holder1
+cleos push action gftorderbook stack '["holder1", "1.00000000 GFT", "1000.0000 EOS"]' -p holder1
 
 cleos push action eosio.token transfer '["holder2", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder2
 cleos push action gyftietoken transfer '["holder2", "gftorderbook", "6.00000000 GFT", "memo"]' -p holder2

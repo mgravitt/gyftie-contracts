@@ -194,7 +194,7 @@ ACTION gyftietoken::gyft (name from,
  
     asset issue_to_gyfter = t.generated_amount;
     asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
-    asset issue_to_gyftee = one_gyftie_token * 10; //getgftbalance (from);
+    asset issue_to_gyftee = one_gyftie_token * 5; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };

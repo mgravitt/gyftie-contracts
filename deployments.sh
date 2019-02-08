@@ -71,3 +71,15 @@ cleos -u https://eos.greymass.com push action gyftietokens unpause '[]' -p gyfti
 cleos -u https://eos.greymass.com push action gftorderbook unpause '[]' -p gftorderbook
 
 # OUT OF MAINTENANCE
+
+
+
+
+
+
+
+
+cleos -u https://eos.greymass.com set account permission gyftietokgen active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gyftietokgen@owner
+cleos -u https://eos.greymass.com set account permission gyftietokgen owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gyftietokgen","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gyftietokgen@owner
+
+
