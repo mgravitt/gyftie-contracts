@@ -13,6 +13,8 @@ CONTRACT genesisgen : public contract
 
   public:
 
+    ACTION test ();
+    
     ACTION generate ( name from,
                       asset gyfter_gft_balance,
                       name to);

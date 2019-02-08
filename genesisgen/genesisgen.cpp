@@ -1,6 +1,11 @@
 #include "genesisgen.hpp"
 #include <math.h>
 
+ACTION genesisgen::test () 
+{
+
+}
+
 ACTION genesisgen::generate (   name from,
                                 asset gyfter_gft_balance,
                                 name to) 
@@ -35,4 +40,4 @@ ACTION genesisgen::generate (   name from,
     t_t.set (t, get_self());
 }
 
-EOSIO_DISPATCH(genesisgen, (generate))
+EOSIO_DISPATCH(genesisgen, (generate)(test))
