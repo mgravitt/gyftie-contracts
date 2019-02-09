@@ -106,7 +106,7 @@ cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["
 
 
 gyftietokens: 50
-gftorderbook: 45
+gftorderbook: 60
 gyftietokgen: 21
 danielflora3: 60
 gyftmultisig: 15

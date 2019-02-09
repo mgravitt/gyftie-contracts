@@ -20,6 +20,8 @@ CONTRACT gyftietoken : public contract
 
     ACTION delconfig ();
 
+    ACTION addrating (name rater, name ratee, uint8_t rating);
+
     ACTION create();
 
     ACTION issue(name to, asset quantity, string memo);
@@ -107,6 +109,25 @@ CONTRACT gyftietoken : public contract
         string  idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
+    typedef eosio::multi_index<"accounts"_n, account> accounts;
+
+    TABLE profile
+    {
+        name        account;
+        uint32_t    rating_sum;
+        uint16_t    rating_count;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"profiles"_n, profile> profile_table;
+
+    TABLE availrating
+    {
+        name        ratee;
+        uint32_t    rate_deadline;
+        uint64_t    primary_key() const { return ratee.value; }
+    };
+    typedef eosio::multi_index<"availratings"_n, availrating> availrating_table;
+    
 
     // TABLE gyft 
     // {
@@ -129,7 +150,6 @@ CONTRACT gyftietoken : public contract
         uint64_t primary_key() const { return supply.symbol.code().raw(); }
     };
 
-    typedef eosio::multi_index<"accounts"_n, account> accounts;
     typedef eosio::multi_index<"stat"_n, currency_stats> stats;
 
     TABLE balance 
