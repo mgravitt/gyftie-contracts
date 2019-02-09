@@ -285,6 +285,10 @@ ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
     print ("Quantity    : ", quantity, "\n");
     print ("Memo        : ", memo.c_str(), "\n");
 
+    if (memo.compare("FOR STAKING") == 0) {
+        return;
+    }
+
     config_table config (get_self(), get_self().value);
     auto c = config.get();
     eosio_assert (get_code() == c.gyftiecontract || get_code() == c.valid_counter_token_contract, "Funds are only accepted from Gyftie contract or valid counter token contract.");
