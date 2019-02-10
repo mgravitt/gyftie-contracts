@@ -211,7 +211,7 @@ CONTRACT gftorderbook : public contract
                 b_itr++;
             }            
         }
-        print (" Total Orders: ", total_orders, "\n");
+        // print (" Total Orders: ", total_orders, "\n");
         return total_orders;
     }
 
@@ -237,10 +237,10 @@ CONTRACT gftorderbook : public contract
 
         asset open_balance =  getopenbalance (account, min_balance.symbol);
 
-        print ("Confirming balance: ", account, "\n");
-        print ("Required balance: ", min_balance, "\n");
-        print ("Total balance: ", b_itr->funds, "\n");
-        print ("Open Balance: ", open_balance, "\n");
+        // print ("Confirming balance: ", account, "\n");
+        // print ("Required balance: ", min_balance, "\n");
+        // print ("Total balance: ", b_itr->funds, "\n");
+        // print ("Open Balance: ", open_balance, "\n");
 
         eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
@@ -261,6 +261,21 @@ CONTRACT gftorderbook : public contract
                                       eos_amount.symbol };
 
         confirm_balance (buyer, eos_amount);
+
+        asset price = s_itr->price_per_gft;
+
+        // print (" Price: ", price, "\n");
+        // print (" Trade Amount: ", trade_amount, "\n");
+
+        asset gft_order_value = get_gft_amount (s_itr->price_per_gft, trade_amount);
+            
+        asset xfer_to_buyer_gft = adjust_asset (gft_order_value, 0.980000000);
+        asset xfer_to_seller_eos = trade_amount;
+        asset taker_fee_to_seller_gft = gft_order_value - xfer_to_buyer_gft;
+
+        sendfrombal (c.gyftiecontract, s_itr->seller, buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
+        sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, xfer_to_seller_eos, "Trade");
+        sendfrombal (c.gyftiecontract, buyer, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
       
         // print ("Executing order, ", std::to_string (sellorder_id).c_str(), "\n");
         // print ("Seller: ", s_itr->seller, "\n");
@@ -268,8 +283,8 @@ CONTRACT gftorderbook : public contract
         // print ("GFT Amount: ", get_gft_amount (s_itr->price_per_gft, trade_amount), "\n");
         // print ("EOS Amount: ", trade_amount, "\n");
 
-        sendfrombal (c.gyftiecontract, s_itr->seller, buyer, get_gft_amount (s_itr->price_per_gft, trade_amount), "Trade");
-        sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, trade_amount, "Trade");
+        // sendfrombal (c.gyftiecontract, s_itr->seller, buyer, get_gft_amount (s_itr->price_per_gft, trade_amount), "Trade");
+        // sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, trade_amount, "Trade");
 
         if (trade_amount == s_itr->order_value) {
             s_t.erase (s_itr);
@@ -298,8 +313,19 @@ CONTRACT gftorderbook : public contract
 
         confirm_balance (seller, trade_amount);
 
-        sendfrombal (c.gyftiecontract, seller, b_itr->buyer, trade_amount, "Trade");
-        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, get_eos_order_value (b_itr->price_per_gft, trade_amount), "Trade");
+        asset price = b_itr->price_per_gft;
+        asset eos_order_value = get_eos_order_value (price, trade_amount);
+
+        asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.9800000);
+        asset xfer_to_buyer_gft = trade_amount ;
+        asset taker_fee_to_buyer_eos = eos_order_value - xfer_to_seller_eos;
+
+        sendfrombal (c.gyftiecontract, seller, b_itr->buyer, xfer_to_buyer_gft, "Trade");
+        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, xfer_to_seller_eos, "Trade minus Taker Fees");
+        sendfrombal (c.valid_counter_token_contract, seller, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
+      
+        // sendfrombal (c.gyftiecontract, seller, b_itr->buyer, trade_amount, "Trade");
+        // sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, get_eos_order_value (b_itr->price_per_gft, trade_amount), "Trade");
 
         if (trade_amount == b_itr->gft_amount) {
             b_t.erase (b_itr);
@@ -314,9 +340,9 @@ CONTRACT gftorderbook : public contract
     asset get_eos_order_value (asset price_per_gft, asset gft_amount) 
     {
         uint64_t gft_quantity = gft_amount.amount; // / pow(10,gft_amount.symbol.precision());
-        print (" inside get order value, gft_amount: ", gft_amount, "\n");
-        print (" inside get order value: gft_quantity: ", gft_quantity, "\n");
-        print (" inside get order value: price * gft qty: ", price_per_gft * gft_quantity / pow(10,GYFTIE_PRECISION), "\n");
+        // print (" inside get order value, gft_amount: ", gft_amount, "\n");
+        // print (" inside get order value: gft_quantity: ", gft_quantity, "\n");
+        // print (" inside get order value: price * gft qty: ", price_per_gft * gft_quantity / pow(10,GYFTIE_PRECISION), "\n");
         return price_per_gft * gft_quantity / pow(10,GYFTIE_PRECISION);
     }
 
@@ -367,36 +393,45 @@ CONTRACT gftorderbook : public contract
                                                 s_itr->gft_amount.amount),
                                       b_itr->gft_amount.symbol };
 
-        // NEED TO DECIDE HOW TO HANDLE DIFFERENCE BETWEEN BUYING AND SELLING PRICE
-        asset price = b_itr->price_per_gft;
-        //DEPLOY
+           
+        // if seller is market maker
         if (s_itr->created_date < b_itr->created_date) {
-            price = s_itr->price_per_gft;
+            asset price = s_itr->price_per_gft;
+            
+            asset xfer_to_buyer_gft = adjust_asset (trade_amount, 0.980000000);
+            asset xfer_to_seller_eos = get_eos_order_value (price, trade_amount);
+            asset taker_fee_to_seller_gft = trade_amount - xfer_to_buyer_gft;
+
+            sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
+            sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, xfer_to_seller_eos, "Trade");
+            sendfrombal (c.gyftiecontract, b_itr->buyer, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
+        } else { // buyer is market maker
+            asset price = b_itr->price_per_gft;
+            asset eos_order_value = get_eos_order_value (price, trade_amount);
+
+            asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.9800000);
+            asset xfer_to_buyer_gft = trade_amount ;
+            asset taker_fee_to_buyer_eos = eos_order_value - xfer_to_seller_eos;
+
+            sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, xfer_to_buyer_gft, "Trade");
+            sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, xfer_to_seller_eos, "Trade minus Taker Fees");
+            sendfrombal (c.valid_counter_token_contract, s_itr->seller, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
         }
-        
-        sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, trade_amount, "Trade");
-        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, get_eos_order_value (price, trade_amount), "Trade");
 
         if (b_itr->gft_amount == s_itr->gft_amount) {
             s_t.erase (s_itr);
             b_t.erase (b_itr);
-            // print ("Closing buy order: ", b_itr->order_id, "\n");
-            // print ("Closing sell order: ", s_itr->order_id, "\n");
         } else if (b_itr->gft_amount > s_itr->gft_amount) {
-            // print ("Decrementing amount on buy order ", b_itr->order_id, " to ", b_itr->gft_amount - s_itr->gft_amount, "\n");
             b_t.modify (b_itr, get_self(), [&](auto &b) {
                 b.gft_amount -= s_itr->gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
-            // print ("Closing sell order: ", s_itr->order_id, "\n");
             s_t.erase (s_itr);
         } else if (s_itr->gft_amount > b_itr->gft_amount) {
-            // print ("Decrementing amount on sell order ", s_itr->order_id, " to ", s_itr->gft_amount - b_itr->gft_amount, "\n");
              s_t.modify (s_itr, get_self(), [&](auto &s) {
                 s.gft_amount -= b_itr->gft_amount;
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
-            // print ("Closing buy order: ", b_itr->order_id, "\n");
             b_t.erase (b_itr);
         }
     }
