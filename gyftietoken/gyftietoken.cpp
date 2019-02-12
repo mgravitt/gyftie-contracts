@@ -50,6 +50,18 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
+// ACTION gyftietoken::sudoprofile (name account) 
+// {
+//     require_auth (get_self());
+//     eosio_assert (is_tokenholder(account), "Account is not a token holder.");
+
+//     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+//     accounts a_t (get_self(), account.value);
+//     auto a_itr = a_t.find(sym.code().raw());
+
+//     insert_profile (account, a_itr->idhash);
+// }
+
 ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 {
     availrating_table a_t (get_self(), rater.value);
@@ -209,7 +221,7 @@ ACTION gyftietoken::gyft (name from,
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
     eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
 
-    save_idhash (to, idhash);
+    insert_profile (to, idhash);
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -265,7 +277,7 @@ ACTION gyftietoken::create()
         s.issuer = get_self();
     });
 
-    save_idhash (get_self(), "ISSUER-HASH-PLACEHOLDER");
+    insert_profile (get_self(), "ISSUER-HASH-PLACEHOLDER");
 }
 
 ACTION gyftietoken::issue(name to, asset quantity, string memo)
@@ -391,5 +403,5 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(addgyft)
-                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)//(sudoprofile)
                             (removeprop)(setcounter))

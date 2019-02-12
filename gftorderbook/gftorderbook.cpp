@@ -74,10 +74,10 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 {
     require_auth (buyer);
 
-    print (" LIMIT BUY \n");
-    print (" price per gft: ", price_per_gft, "\n");
-    print (" gft amount : ", gft_amount, "\n");
-    print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n" );
+    // print (" LIMIT BUY \n");
+    // print (" price per gft: ", price_per_gft, "\n");
+    // print (" gft amount : ", gft_amount, "\n");
+    // print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n" );
 
     confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
 
@@ -97,10 +97,10 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
     require_auth (seller);
-    print (" \n\nLIMIT SELL \n");
-    print (" price per gft: ", price_per_gft, "\n");
-    print (" gft amount : ", gft_amount, "\n");
-    print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n\n\n" );
+    // print (" \n\nLIMIT SELL \n");
+    // print (" price per gft: ", price_per_gft, "\n");
+    // print (" gft amount : ", gft_amount, "\n");
+    // print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n\n\n" );
 
     confirm_balance (seller, gft_amount);
 
@@ -121,7 +121,7 @@ ACTION gftorderbook::stack (name account, asset gft_amount, asset eos_amount)
 {
     require_auth (account);
 
-    asset market_price = get_market_price ();
+    asset market_price = get_highest_buy ();
 
     limitsellgft (account, adjust_asset (market_price, 1.05000000), adjust_asset(gft_amount, 0.25000000));
     limitsellgft (account, adjust_asset (market_price, 1.10000000), adjust_asset(gft_amount, 0.25000000));
@@ -187,11 +187,11 @@ ACTION gftorderbook::processbook ()
         return;
     }
 
-    print ("Evaluating Orders\n");
-    print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
-    print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
-    print ("Sales Price: ", s_itr->price_per_gft, "\n");
-    print ("Buy Price: ", b_itr->price_per_gft, "\n");
+    // print ("Evaluating Orders\n");
+    // print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
+    // print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
+    // print ("Sales Price: ", s_itr->price_per_gft, "\n");
+    // print ("Buy Price: ", b_itr->price_per_gft, "\n");
 
     if (s_itr->price_per_gft <= b_itr->price_per_gft) {
         match_order (s_itr->order_id, b_itr->order_id);

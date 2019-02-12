@@ -20,6 +20,8 @@ CONTRACT gyftietoken : public contract
 
     ACTION delconfig ();
 
+    // ACTION sudoprofile (name account);
+
     ACTION addrating (name rater, name ratee, uint8_t rating);
 
     ACTION create();
@@ -116,6 +118,8 @@ CONTRACT gyftietoken : public contract
         name        account;
         uint32_t    rating_sum;
         uint16_t    rating_count;
+        string      idhash;
+        string      id_expiration;
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
@@ -215,13 +219,36 @@ CONTRACT gyftietoken : public contract
 
     bool is_gyftie_account (name account) 
     {
+        bool is_gyftie = false;
+
         symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
         accounts a_t (get_self(), account.value);
         auto a_itr = a_t.find (sym.code().raw());
-        if (a_itr == a_t.end()) {
-            return false;
+        if (a_itr != a_t.end()) {
+            is_gyftie = true;
         }
-        return true;
+
+        profile_table p_t (get_self(), get_self().value);
+        auto p_itr = p_t.find (account.value);
+        if (p_itr != p_t.end()) {
+            is_gyftie = true;
+        }
+
+        return is_gyftie;
+    }
+
+    void insert_profile (const name account, const string idhash)
+    {
+        profile_table p_t (get_self(), get_self().value);
+        auto p_itr = p_t.find (account.value);
+        eosio_assert (p_itr == p_t.end(), "Account already has a profile.");
+
+        p_t.emplace (get_self(), [&](auto &p) {
+            p.account = account;
+            p.rating_count = 0;
+            p.rating_sum = 0;
+            p.idhash = idhash;
+        });
     }
 
     void increment_account_count () 
@@ -232,24 +259,24 @@ CONTRACT gyftietoken : public contract
         counter.set (c, get_self());
     }
 
-    void save_idhash (const name account, const string idhash) 
-    {
-        accounts a_t (get_self(), account.value);
-        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-        auto a_itr = a_t.find (sym.code().raw());
+    // void onboard (const name account, const string idhash) 
+    // {
+    //     accounts a_t (get_self(), account.value);
+    //     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    //     auto a_itr = a_t.find (sym.code().raw());
         
-        if (a_itr == a_t.end()) {
-            asset zero_balance = asset { 0, sym };
-            a_t.emplace (get_self(), [&](auto &a) {
-                a.balance = zero_balance;
-                a.idhash = idhash;
-            });
-        } else {
-            a_t.modify (a_itr, get_self(), [&](auto &a) {
-                a.idhash = idhash;
-            });
-        }
-    }
+    //     if (a_itr == a_t.end()) {
+    //         asset zero_balance = asset { 0, sym };
+    //         a_t.emplace (get_self(), [&](auto &a) {
+    //             a.balance = zero_balance;
+    //             a.idhash = idhash;
+    //         });
+    //     } else {
+    //         a_t.modify (a_itr, get_self(), [&](auto &a) {
+    //             a.idhash = idhash;
+    //         });
+    //     }
+    // }
 
     asset getgftbalance (name account)
     {

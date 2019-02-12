@@ -71,6 +71,13 @@ CONTRACT gftorderbook : public contract
    typedef singleton<"configs"_n, Config> config_table;
    typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
 
+   TABLE State
+   {
+       asset        last_price;
+   };
+   typedef singleton<"states"_n, State> state_table;
+   typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
+
    TABLE buyorder
     {
         uint64_t    order_id;
@@ -215,7 +222,22 @@ CONTRACT gftorderbook : public contract
         return total_orders;
     }
 
-    asset get_market_price () 
+    void set_last_price (asset last_price)
+    {
+        state_table state (get_self(), get_self().value);
+        State s;
+        s.last_price = last_price;
+        state.set (s, get_self());        
+    }
+
+    asset get_last_price () 
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        return s.last_price;
+    }
+
+    asset get_highest_buy () 
     {
         buyorder_table b_t (get_self(), get_self().value);
         auto b_index = b_t.get_index<"byprice"_n>();
@@ -269,13 +291,14 @@ CONTRACT gftorderbook : public contract
 
         asset gft_order_value = get_gft_amount (s_itr->price_per_gft, trade_amount);
             
-        asset xfer_to_buyer_gft = adjust_asset (gft_order_value, 0.980000000);
+        asset xfer_to_buyer_gft = adjust_asset (gft_order_value, 0.990000000);
         asset xfer_to_seller_eos = trade_amount;
         asset taker_fee_to_seller_gft = gft_order_value - xfer_to_buyer_gft;
 
         sendfrombal (c.gyftiecontract, s_itr->seller, buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
         sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, xfer_to_seller_eos, "Trade");
-        sendfrombal (c.gyftiecontract, buyer, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
+        sendfrombal (c.gyftiecontract, s_itr->seller, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
+        set_last_price (price);
       
         // print ("Executing order, ", std::to_string (sellorder_id).c_str(), "\n");
         // print ("Seller: ", s_itr->seller, "\n");
@@ -316,14 +339,15 @@ CONTRACT gftorderbook : public contract
         asset price = b_itr->price_per_gft;
         asset eos_order_value = get_eos_order_value (price, trade_amount);
 
-        asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.9800000);
+        asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.990000000);
         asset xfer_to_buyer_gft = trade_amount ;
         asset taker_fee_to_buyer_eos = eos_order_value - xfer_to_seller_eos;
 
         sendfrombal (c.gyftiecontract, seller, b_itr->buyer, xfer_to_buyer_gft, "Trade");
         sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, xfer_to_seller_eos, "Trade minus Taker Fees");
-        sendfrombal (c.valid_counter_token_contract, seller, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
-      
+        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
+        set_last_price (price);
+
         // sendfrombal (c.gyftiecontract, seller, b_itr->buyer, trade_amount, "Trade");
         // sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, get_eos_order_value (b_itr->price_per_gft, trade_amount), "Trade");
 
@@ -372,9 +396,6 @@ CONTRACT gftorderbook : public contract
 
     void match_order (uint64_t sellorder_id, uint64_t buyorder_id)
     {
-
-        print ("\n\n found a mathcing order \n\n");
-
         // handle trade between two orders, decrementally the lower of the two appropriately
         sellorder_table s_t (get_self(), get_self().value);
         auto s_itr = s_t.find (sellorder_id);
@@ -392,30 +413,32 @@ CONTRACT gftorderbook : public contract
         asset trade_amount = asset { std::min (b_itr->gft_amount.amount,
                                                 s_itr->gft_amount.amount),
                                       b_itr->gft_amount.symbol };
-
            
         // if seller is market maker
         if (s_itr->created_date < b_itr->created_date) {
             asset price = s_itr->price_per_gft;
             
-            asset xfer_to_buyer_gft = adjust_asset (trade_amount, 0.980000000);
+            asset xfer_to_buyer_gft = adjust_asset (trade_amount, 0.990000000);
             asset xfer_to_seller_eos = get_eos_order_value (price, trade_amount);
             asset taker_fee_to_seller_gft = trade_amount - xfer_to_buyer_gft;
 
             sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
             sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, xfer_to_seller_eos, "Trade");
-            sendfrombal (c.gyftiecontract, b_itr->buyer, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
+            sendfrombal (c.gyftiecontract, s_itr->seller, s_itr->seller, taker_fee_to_seller_gft, "Market Maker Reward");
+            set_last_price (price);
+
         } else { // buyer is market maker
             asset price = b_itr->price_per_gft;
             asset eos_order_value = get_eos_order_value (price, trade_amount);
 
-            asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.9800000);
+            asset xfer_to_seller_eos = adjust_asset (eos_order_value, 0.990000000);
             asset xfer_to_buyer_gft = trade_amount ;
             asset taker_fee_to_buyer_eos = eos_order_value - xfer_to_seller_eos;
 
             sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, xfer_to_buyer_gft, "Trade");
             sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, xfer_to_seller_eos, "Trade minus Taker Fees");
-            sendfrombal (c.valid_counter_token_contract, s_itr->seller, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
+            sendfrombal (c.valid_counter_token_contract, b_itr->buyer, b_itr->buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
+            set_last_price (price);
         }
 
         if (b_itr->gft_amount == s_itr->gft_amount) {
