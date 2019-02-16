@@ -23,6 +23,24 @@ ACTION gftorderbook::delconfig ()
     config.remove();
 }
 
+ACTION gftorderbook::clearstate ()
+{
+    require_auth (get_self());
+    state_table state (get_self(), get_self().value);
+    state.remove();
+}
+
+ACTION gftorderbook::setstate (asset last_price, asset gft_for_sale, asset eos_to_spend) 
+{
+    require_auth (get_self());
+    state_table state (get_self(), get_self().value);
+    State s;
+    s.last_price = last_price;
+    // s.gft_for_sale = gft_for_sale;
+    // s.eos_to_spend = eos_to_spend;
+    state.set (s, get_self());
+}
+
 ACTION gftorderbook::pause () 
 {
     require_auth (get_self());
@@ -74,12 +92,8 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 {
     require_auth (buyer);
 
-    // print (" LIMIT BUY \n");
-    // print (" price per gft: ", price_per_gft, "\n");
-    // print (" gft amount : ", gft_amount, "\n");
-    // print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n" );
-
     confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
+    increase_buygft_liquidity (get_eos_order_value(price_per_gft, gft_amount));
 
     buyorder_table b_t (get_self(), get_self().value);
     b_t.emplace (get_self(), [&](auto &b) {
@@ -97,12 +111,9 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
     require_auth (seller);
-    // print (" \n\nLIMIT SELL \n");
-    // print (" price per gft: ", price_per_gft, "\n");
-    // print (" gft amount : ", gft_amount, "\n");
-    // print (" eos order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n\n\n" );
 
     confirm_balance (seller, gft_amount);
+    increase_sellgft_liquidity (gft_amount);
 
     sellorder_table s_t (get_self(), get_self().value);
     s_t.emplace (get_self(), [&](auto &s) {
@@ -186,12 +197,6 @@ ACTION gftorderbook::processbook ()
     if (s_itr == s_index.end() || b_itr == b_index.rend()) {
         return;
     }
-
-    // print ("Evaluating Orders\n");
-    // print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
-    // print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
-    // print ("Sales Price: ", s_itr->price_per_gft, "\n");
-    // print ("Buy Price: ", b_itr->price_per_gft, "\n");
 
     if (s_itr->price_per_gft <= b_itr->price_per_gft) {
         match_order (s_itr->order_id, b_itr->order_id);
@@ -337,7 +342,7 @@ extern "C" {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)
-                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo))
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    
         }
         eosio_exit(0);
