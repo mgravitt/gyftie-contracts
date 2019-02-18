@@ -41,6 +41,8 @@ CONTRACT gftorderbook : public contract
 
    ACTION processbook ();
 
+   ACTION tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward);
+
    ACTION withdraw (name account);
 
    ACTION delbuyorder (uint64_t buyorder_id);
@@ -313,6 +315,12 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.gyftiecontract, seller, seller, taker_fee_to_seller_gft, "Market Maker Reward");
         set_last_price (price);
         decrease_sellgft_liquidity (gft_amount);
+
+        action(
+            permission_level{get_self(), "owner"_n},
+            get_self(), "tradeexec"_n,
+            std::make_tuple(buyer, seller, seller, gft_amount, price, taker_fee_to_seller_gft))
+        .send();
     }
 
     void settle_buyer_maker (name buyer, name seller, asset price, asset gft_amount)
@@ -329,6 +337,12 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.valid_counter_token_contract, buyer, buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
         set_last_price (price);
         decrease_buygft_liquidity (eos_order_value);
+
+        action(
+            permission_level{get_self(), "owner"_n},
+            get_self(), "tradeexec"_n,
+            std::make_tuple(buyer, seller, buyer, gft_amount, price, taker_fee_to_buyer_eos))
+        .send();
     }
 
     void buygft (uint64_t sellorder_id, name buyer, asset eos_to_spend) 

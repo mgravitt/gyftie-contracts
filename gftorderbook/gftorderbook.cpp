@@ -204,6 +204,11 @@ ACTION gftorderbook::processbook ()
     }
 }
 
+ACTION gftorderbook::tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward)
+{
+    require_auth (get_self());
+}
+
 ACTION gftorderbook::delbuyorder (uint64_t buyorder_id) 
 {
     buyorder_table b_t (get_self(), get_self().value);
@@ -341,7 +346,7 @@ extern "C" {
         if (code == receiver) {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)
-                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    
         }

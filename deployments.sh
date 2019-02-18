@@ -74,6 +74,9 @@ cleos -u https://eos.greymass.com push action gftorderbook unpause '[]' -p gftor
 
 
 
+# Step 1 - show permission change - https://bloks.io/account/gyftietokgen
+cleos -u https://eos.greymass.com set account permission gftorderbook active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gftorderbook@owner
+cleos -u https://eos.greymass.com set account permission gftorderbook owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gftorderbook@owner
 
 
 
@@ -84,15 +87,82 @@ cleos -u https://eos.greymass.com set account permission gyftietokgen owner '{"t
 
 
 # Step 2 - will need Github ID
-cleos -u https://eos.greymass.com set contract -sjd -x 86400 gyftietokgen genesisgen/ > trx.json
-cleos -u https://eos.greymass.com multisig propose_trx multisigtest '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
-cleos -u https://eos.greymass.com multisig review zombiejigsaw multisigtest
-cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "multisigtest", "Multisig test to update token gen contract", "https://github.com/digital-scarcity/gyftie/commit/f67f38660971514b7cd36d1703b02f51534fa567"]' -p zombiejigsaw
+cleos -u https://eos.greymass.com set contract -sjd -x 86400 gftorderbook gftorderbook/ > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx gftpermbug '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com multisig review zombiejigsaw gftpermbug
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "gftpermbug", "Fix GFT Order Book permissions bug", "https://github.com/digital-scarcity/gyftie/commit/094bbb3e7f31f9a3222fad8dd743d92f1d27ace0"]' -p zombiejigsaw
 
 # Step 3 
 Daniel approve via Scatter on UI
 
 # Step 4 - Approve and Execute
-cleos -u https://eos.greymass.com multisig approve zombiejigsaw multisigtest '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
-cleos -u https://eos.greymass.com multisig exec zombiejigsaw multisigtest -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig approve zombiejigsaw gftpermbug '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig exec zombiejigsaw upgyftben -p zombiejigsaw
+
+
+
+
+###############
+
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["zombiejigsaw"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["1sharky3dog5"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["abbybabygirl"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["amandarachel"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["andrewboyle1"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["annewisloves"]' -p gyftietokens
+
+
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["boobooswimmy"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["dabbarrowman"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["danconover13"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["danielflora3"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["decmichael22"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["djohnstonec1"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["dmweisberger"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["ednaggstoken"]' -p gyftietokens
+
+
+
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["elbamboevic3"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["erinmcdowell"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["exactly12chr"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["fitnessfreak"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["frankmbel135"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["hiltonsupra1"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["ianquah12345"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["jonmaycock12"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["joshjohnpott"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["kunalsoodnyc"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["ladymichelle"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["lamardouglas"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["majkengilmar"]' -p gyftietokens
+
+
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["marcingalily"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["marksuzelted"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["penelopeanns"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["prasanjitdey"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["ratonvaquero"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["rebeccarory1"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["rhzytvxaorvk"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["robertocampo"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["rushmillerkl"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["samchaudhry1"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["scottlazerso"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["timbobjoeboy"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["ttqqqqtt5eos"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["tylerbarth12"]' -p gyftietokens
+cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["vickiepotter"]' -p gyftietokens
+
+
+
+
+
+
+
+
+
+
+
+
 
