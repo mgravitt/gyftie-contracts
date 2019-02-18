@@ -50,6 +50,45 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
+// ACTION gyftietoken::sudoprofile (name account) 
+// {
+//     require_auth (get_self());
+//     eosio_assert (is_tokenholder(account), "Account is not a token holder.");
+
+//     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+//     accounts a_t (get_self(), account.value);
+//     auto a_itr = a_t.find(sym.code().raw());
+
+//     insert_profile (account, a_itr->idhash);
+// }
+
+ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
+{
+    availrating_table a_t (get_self(), rater.value);
+    auto a_itr = a_t.find (ratee.value);
+    eosio_assert (a_itr != a_t.end(), "Account is not available for rating.");
+    eosio_assert (has_auth (rater), "Only eligible rater can add a rating.");
+    eosio_assert (a_itr->rate_deadline >= now(), "Deadline to rate account has passed.");
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (ratee.value);
+    
+    if (p_itr == p_t.end()) {
+        p_t.emplace (get_self(), [&](auto &p) {
+            p.account = ratee;
+            p.rating_count = 1;
+            p.rating_sum = rating;
+        });
+    } else {
+        p_t.modify (p_itr, get_self(), [&](auto &p) {
+            p.rating_count++;
+            p.rating_sum += rating;
+        });
+    }
+
+    a_t.erase (a_itr);
+}
+
 ACTION gyftietoken::removeprop (uint64_t proposal_id) 
 {
     require_auth (get_self());
@@ -182,7 +221,7 @@ ACTION gyftietoken::gyft (name from,
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
     eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
 
-    save_idhash (to, idhash);
+    insert_profile (to, idhash);
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -194,7 +233,7 @@ ACTION gyftietoken::gyft (name from,
  
     asset issue_to_gyfter = t.generated_amount;
     asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
-    asset issue_to_gyftee = one_gyftie_token * 10; //getgftbalance (from);
+    asset issue_to_gyftee = one_gyftie_token * 5; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };
@@ -238,7 +277,7 @@ ACTION gyftietoken::create()
         s.issuer = get_self();
     });
 
-    save_idhash (get_self(), "ISSUER-HASH-PLACEHOLDER");
+    insert_profile (get_self(), "ISSUER-HASH-PLACEHOLDER");
 }
 
 ACTION gyftietoken::issue(name to, asset quantity, string memo)
@@ -284,6 +323,21 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     auto c = config.get();
     eosio_assert(is_gyftie_account(to) || c.gftorderbook == to || c.gyftie_foundation == to, "Recipient is not a Gyftie account. Must Gyft first.");
    
+    if (to != c.gftorderbook || to != c.gyftie_foundation || to != get_self()) {
+        availrating_table a_t (get_self(), to.value);
+        auto a_itr = a_t.find (from.value);
+        if (a_itr != a_t.end()) {
+            a_t.modify (a_itr, get_self(), [&](auto &a) {
+                a.rate_deadline = now() + (60 * 60 * 24);
+            });
+        } else {
+            a_t.emplace (get_self(),  [&](auto &a) {
+                a.ratee = from;
+                a.rate_deadline = now() + (60 * 60 * 24);
+            });
+        }
+    }
+
     auto sym = quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
@@ -349,5 +403,5 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(addgyft)
-                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)//(sudoprofile)
                             (removeprop)(setcounter))

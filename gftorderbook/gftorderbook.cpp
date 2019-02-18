@@ -23,6 +23,24 @@ ACTION gftorderbook::delconfig ()
     config.remove();
 }
 
+ACTION gftorderbook::clearstate ()
+{
+    require_auth (get_self());
+    state_table state (get_self(), get_self().value);
+    state.remove();
+}
+
+ACTION gftorderbook::setstate (asset last_price, asset gft_for_sale, asset eos_to_spend) 
+{
+    require_auth (get_self());
+    state_table state (get_self(), get_self().value);
+    State s;
+    s.last_price = last_price;
+    // s.gft_for_sale = gft_for_sale;
+    // s.eos_to_spend = eos_to_spend;
+    state.set (s, get_self());
+}
+
 ACTION gftorderbook::pause () 
 {
     require_auth (get_self());
@@ -73,7 +91,9 @@ ACTION gftorderbook::withdraw (name account)
 ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amount)
 {
     require_auth (buyer);
+
     confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
+    increase_buygft_liquidity (get_eos_order_value(price_per_gft, gft_amount));
 
     buyorder_table b_t (get_self(), get_self().value);
     b_t.emplace (get_self(), [&](auto &b) {
@@ -91,8 +111,10 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
     require_auth (seller);
+
     confirm_balance (seller, gft_amount);
-    
+    increase_sellgft_liquidity (gft_amount);
+
     sellorder_table s_t (get_self(), get_self().value);
     s_t.emplace (get_self(), [&](auto &s) {
         s.order_id = s_t.available_primary_key();
@@ -104,6 +126,21 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     });
 
     processbook ();
+}
+
+ACTION gftorderbook::stack (name account, asset gft_amount, asset eos_amount)
+{
+    require_auth (account);
+
+    asset market_price = get_highest_buy ();
+
+    limitsellgft (account, adjust_asset (market_price, 1.05000000), adjust_asset(gft_amount, 0.25000000));
+    limitsellgft (account, adjust_asset (market_price, 1.10000000), adjust_asset(gft_amount, 0.25000000));
+    limitsellgft (account, adjust_asset (market_price, 1.20000000), adjust_asset(gft_amount, 0.50000000));
+
+    limitbuygft (account, adjust_asset (market_price, 0.95000000), get_gft_amount(adjust_asset (market_price, 0.95000000), adjust_asset(eos_amount, 0.25000000)));
+    limitbuygft (account, adjust_asset (market_price, 0.90000000), get_gft_amount(adjust_asset (market_price, 0.90000000), adjust_asset(eos_amount, 0.25000000)));
+    limitbuygft (account, adjust_asset (market_price, 0.80000000), get_gft_amount(adjust_asset (market_price, 0.80000000), adjust_asset(eos_amount, 0.50000000)));
 }
 
 ACTION gftorderbook::marketbuy (name buyer, asset eos_amount) 
@@ -161,16 +198,15 @@ ACTION gftorderbook::processbook ()
         return;
     }
 
-    // print ("Evaluating Orders\n");
-    // print ("Sell Order ID: ", std::to_string(s_itr->order_id).c_str(), "\n");
-    // print ("Buy Order ID: ", std::to_string(b_itr->order_id).c_str(), "\n");
-    // print ("Sales Price: ", s_itr->price_per_gft, "\n");
-    // print ("Buy Price: ", b_itr->price_per_gft, "\n");
-
     if (s_itr->price_per_gft <= b_itr->price_per_gft) {
         match_order (s_itr->order_id, b_itr->order_id);
         processbook ();
     }
+}
+
+ACTION gftorderbook::tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward)
+{
+    require_auth (get_self());
 }
 
 ACTION gftorderbook::delbuyorder (uint64_t buyorder_id) 
@@ -249,8 +285,8 @@ ACTION gftorderbook::admindelso (uint64_t sellorder_id)
 ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
     
     eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
-    if (from == get_self()) {
-        return; // sending funds as sender
+    if (to != get_self()) {
+        return; // this contract is not recepient
     }
 
     print ("Code        : ", get_code(), "\n");
@@ -258,6 +294,10 @@ ACTION gftorderbook::transrec(name from, name to, asset quantity, string memo) {
     print ("To          : ", to, "\n");
     print ("Quantity    : ", quantity, "\n");
     print ("Memo        : ", memo.c_str(), "\n");
+
+    if (memo.compare("FOR STAKING") == 0) {
+        return;
+    }
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -305,9 +345,9 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)
-                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)
-                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo))
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    
         }
         eosio_exit(0);

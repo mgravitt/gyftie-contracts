@@ -23,17 +23,25 @@ CONTRACT gftorderbook : public contract
 
     ACTION delconfig ();
 
+    ACTION clearstate ();
+
+    ACTION setstate (asset last_price, asset gft_for_sale, asset eos_to_spend);
+
    ACTION removeorders () ;
 
    ACTION limitbuygft (name buyer, asset price_per_gft, asset gft_amount);
 
    ACTION limitsellgft (name seller, asset price_per_gft, asset gft_amount);
 
+    ACTION stack (name account, asset gft_amount, asset eos_amount);
+
    ACTION marketbuy (name buyer, asset eos_amount);
 
    ACTION marketsell (name seller, asset gft_amount);
 
    ACTION processbook ();
+
+   ACTION tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward);
 
    ACTION withdraw (name account);
 
@@ -52,22 +60,32 @@ CONTRACT gftorderbook : public contract
 
   private:
 
-    const uint64_t SCALER = 1000000000;
+    const uint64_t SCALER = 1000000;
     const string    GYFTIE_SYM_STR  = "GFT";
     const uint8_t   GYFTIE_PRECISION = 8;
     const uint8_t   PAUSED = 1;
     const uint8_t   UNPAUSED = 0;
+    const float     MAKER_REWARD = 0.0100000000;
 
    TABLE Config
    {
        name         gyftiecontract;
        name         valid_counter_token_contract;
        symbol       valid_counter_token_symbol;
-       uint8_t     paused;
+       uint8_t      paused;
    };
 
    typedef singleton<"configs"_n, Config> config_table;
    typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
+
+   TABLE State
+   {
+       asset        last_price;
+    //    asset        gft_for_sale;
+    //    asset        eos_to_spend;
+   };
+   typedef singleton<"states"_n, State> state_table;
+   typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
 
    TABLE buyorder
     {
@@ -170,7 +188,7 @@ CONTRACT gftorderbook : public contract
         print("Memo             : ", memo, "\n");
 
         action(
-            permission_level{from, "active"_n},
+            permission_level{from, "owner"_n},
             token_contract, "transfer"_n,
             std::make_tuple(from, to, token_amount, memo))
             .send();
@@ -180,31 +198,98 @@ CONTRACT gftorderbook : public contract
 
     asset getopenbalance (name account, symbol sym)
     {
-        buyorder_table b_t (get_self(), get_self().value);
-        auto b_index = b_t.get_index<"bybuyer"_n>();
-        auto b_itr = b_index.find (account.value);
-
         asset total_orders = asset {0, sym};
+    
+        symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
-        while (b_itr != b_index.end() && b_itr->buyer == account) {
-            if (b_itr->order_value.symbol == sym) {
-                total_orders += b_itr->order_value;
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+        
+        if (sym == gft_symbol) {
+            sellorder_table s_t (get_self(), get_self().value);
+            auto s_index = s_t.get_index<"byseller"_n>();
+            auto s_itr = s_index.find (account.value);
+
+            while (s_itr != s_index.end() && s_itr->seller == account) {
+                if (s_itr->gft_amount.symbol == sym) {
+                    total_orders += s_itr->gft_amount;
+                }
+                s_itr++;
             }
-            b_itr++;
+        } else if (sym == c.valid_counter_token_symbol) {
+            buyorder_table b_t (get_self(), get_self().value);
+            auto b_index = b_t.get_index<"bybuyer"_n>();
+            auto b_itr = b_index.find (account.value);
+            while (b_itr != b_index.end() && b_itr->buyer == account) {
+                if (b_itr->order_value.symbol == sym) {
+                    total_orders += b_itr->order_value;
+                }
+                b_itr++;
+            }            
         }
-
-        sellorder_table s_t (get_self(), get_self().value);
-        auto s_index = s_t.get_index<"byseller"_n>();
-        auto s_itr = s_index.find (account.value);
-
-        while (s_itr != s_index.end() && s_itr->seller == account) {
-            if (s_itr->gft_amount.symbol == sym) {
-                total_orders += s_itr->gft_amount;
-            }
-            s_itr++;
-        }
-
         return total_orders;
+    }
+
+    void set_last_price (asset last_price)
+    {
+        state_table state (get_self(), get_self().value);
+        State s;
+        s.last_price = last_price;
+        state.set (s, get_self());        
+    }
+
+    asset get_last_price () 
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        return s.last_price;
+    }
+
+    asset get_highest_buy () 
+    {
+        buyorder_table b_t (get_self(), get_self().value);
+        auto b_index = b_t.get_index<"byprice"_n>();
+        auto b_itr = b_index.rbegin();
+
+        eosio_assert (b_itr != b_index.rend(), "No open buy orders; market price cannot be determined.");
+        return b_itr->price_per_gft;
+    }
+
+    asset adjust_asset (asset original_asset, float adjustment)
+    {
+        return asset { static_cast<int64_t> (original_asset.amount * adjustment), original_asset.symbol };
+    }
+
+    void decrease_sellgft_liquidity (asset gft_sold)
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        // s.gft_for_sale -= gft_sold;
+        state.set (s, get_self());
+    }
+
+    void decrease_buygft_liquidity (asset eos_spent)
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        // s.eos_to_spend -= eos_spent;
+        state.set (s, get_self());
+    }
+
+    void increase_sellgft_liquidity (asset new_gft_added)
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        // s.gft_for_sale -= gft_sold;
+        state.set (s, get_self());
+    }
+
+    void increase_buygft_liquidity (asset new_eos_to_spend)
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        // s.eos_to_spend -= new_eos_to_spend;
+        state.set (s, get_self());
     }
 
     void confirm_balance (name account, asset min_balance) 
@@ -213,16 +298,54 @@ CONTRACT gftorderbook : public contract
         auto b_itr = b_t.find (min_balance.symbol.code().raw());
 
         asset open_balance =  getopenbalance (account, min_balance.symbol);
-
-        // print ("Confirming balance: ", account, "\n");
-        // print ("Required balance: ", min_balance, "\n");
-        // print ("Total balance: ", b_itr->funds, "\n");
-        // print ("Open Balance: ", open_balance, "\n");
-
         eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
 
-    void buygft (uint64_t sellorder_id, name buyer, asset eos_amount) 
+    void settle_seller_maker (name buyer, name seller, asset price, asset gft_amount)
+    {
+        asset xfer_to_buyer_gft = adjust_asset (gft_amount, 1 - MAKER_REWARD);
+        asset xfer_to_seller_eos = get_eos_order_value (price, gft_amount);
+        asset taker_fee_to_seller_gft = gft_amount - xfer_to_buyer_gft;
+
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+
+        sendfrombal (c.gyftiecontract, seller, buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
+        sendfrombal (c.valid_counter_token_contract, buyer, seller, xfer_to_seller_eos, "Trade");
+        sendfrombal (c.gyftiecontract, seller, seller, taker_fee_to_seller_gft, "Market Maker Reward");
+        set_last_price (price);
+        decrease_sellgft_liquidity (gft_amount);
+
+        action(
+            permission_level{get_self(), "owner"_n},
+            get_self(), "tradeexec"_n,
+            std::make_tuple(buyer, seller, seller, gft_amount, price, taker_fee_to_seller_gft))
+        .send();
+    }
+
+    void settle_buyer_maker (name buyer, name seller, asset price, asset gft_amount)
+    {
+        asset eos_order_value = get_eos_order_value (price, gft_amount);
+        asset xfer_to_seller_eos = adjust_asset (eos_order_value, 1 - MAKER_REWARD);
+        asset taker_fee_to_buyer_eos = eos_order_value - xfer_to_seller_eos;
+
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+
+        sendfrombal (c.gyftiecontract, seller, buyer, gft_amount, "Trade");
+        sendfrombal (c.valid_counter_token_contract, buyer, seller, xfer_to_seller_eos, "Trade minus Taker Fees");
+        sendfrombal (c.valid_counter_token_contract, buyer, buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
+        set_last_price (price);
+        decrease_buygft_liquidity (eos_order_value);
+
+        action(
+            permission_level{get_self(), "owner"_n},
+            get_self(), "tradeexec"_n,
+            std::make_tuple(buyer, seller, buyer, gft_amount, price, taker_fee_to_buyer_eos))
+        .send();
+    }
+
+    void buygft (uint64_t sellorder_id, name buyer, asset eos_to_spend) 
     {
         require_auth (buyer);
         
@@ -230,29 +353,19 @@ CONTRACT gftorderbook : public contract
         auto s_itr = s_t.find (sellorder_id);
         eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
 
-        config_table config (get_self(), get_self().value);
-        auto c = config.get();
-
-        asset trade_amount = asset { std::min (eos_amount.amount,
-                                                s_itr->order_value.amount),
-                                      eos_amount.symbol };
+        asset eos_amount = asset { std::min (eos_to_spend.amount, s_itr->order_value.amount),
+                                   eos_to_spend.symbol };
 
         confirm_balance (buyer, eos_amount);
-      
-        // print ("Executing order, ", std::to_string (sellorder_id).c_str(), "\n");
-        // print ("Seller: ", s_itr->seller, "\n");
-        // print ("Buyer: ", buyer, "\n");
-        // print ("GFT Amount: ", get_gft_amount (s_itr->price_per_gft, trade_amount), "\n");
-        // print ("EOS Amount: ", trade_amount, "\n");
 
-        sendfrombal (c.gyftiecontract, s_itr->seller, buyer, get_gft_amount (s_itr->price_per_gft, trade_amount), "Trade");
-        sendfrombal (c.valid_counter_token_contract, buyer, s_itr->seller, trade_amount, "Trade");
+        settle_seller_maker (buyer, s_itr->seller, s_itr->price_per_gft, 
+                             get_gft_amount (s_itr->price_per_gft, eos_amount));
 
-        if (trade_amount == s_itr->order_value) {
+        if (eos_amount == s_itr->order_value) {
             s_t.erase (s_itr);
-        } else if (s_itr->order_value > trade_amount) {
+        } else if (s_itr->order_value > eos_amount) {
             s_t.modify (s_itr, get_self(), [&](auto &s) {
-                s.gft_amount -= get_gft_amount (s_itr->price_per_gft, trade_amount);
+                s.gft_amount -= get_gft_amount (s_itr->price_per_gft, eos_amount);
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
         }
@@ -266,23 +379,18 @@ CONTRACT gftorderbook : public contract
         auto b_itr = b_t.find (buyorder_id);
         eosio_assert (b_itr != b_t.end(), "Buy Order ID does not exist.");
 
-        config_table config (get_self(), get_self().value);
-        auto c = config.get();
+        asset gft_amount = asset { std::min (gft_to_sell.amount, b_itr->gft_amount.amount),
+                                   gft_to_sell.symbol };
 
-        asset trade_amount = asset { std::min (gft_to_sell.amount,
-                                                b_itr->gft_amount.amount),
-                                      gft_to_sell.symbol };
+        confirm_balance (seller, gft_amount);
 
-        confirm_balance (seller, trade_amount);
+        settle_buyer_maker (b_itr->buyer, seller, b_itr->price_per_gft, gft_amount);
 
-        sendfrombal (c.gyftiecontract, seller, b_itr->buyer, trade_amount, "Trade");
-        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, seller, get_eos_order_value (b_itr->price_per_gft, trade_amount), "Trade");
-
-        if (trade_amount == b_itr->gft_amount) {
+        if (gft_amount == b_itr->gft_amount) {
             b_t.erase (b_itr);
-        } else if (b_itr->gft_amount > trade_amount) {
+        } else if (b_itr->gft_amount > gft_amount) {
             b_t.modify (b_itr, get_self(), [&](auto &b) {
-                b.gft_amount -= trade_amount;
+                b.gft_amount -= gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
         }
@@ -290,32 +398,16 @@ CONTRACT gftorderbook : public contract
 
     asset get_eos_order_value (asset price_per_gft, asset gft_amount) 
     {
-        uint64_t gft_quantity = SCALER * gft_amount.amount / pow(10,gft_amount.symbol.precision());
-        return price_per_gft * gft_quantity / SCALER;
+        // uint64_t gft_quantity = gft_amount.amount; 
+        return price_per_gft * gft_amount.amount / pow(10,GYFTIE_PRECISION);
     }
 
     asset get_gft_amount (asset price_per_gft, asset eos_amount)
     {
-        // print ("\n\nGET GFT AMOUNT\n");
-        // print (" Price per gft: ", price_per_gft, "\n");
-        // print (" EOS amount: ", eos_amount, "\n");
-
         symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-
         float gft_quantity = pow(10,GYFTIE_PRECISION) * eos_amount.amount / price_per_gft.amount;
-
-        // uint64_t eos_quantity = SCALER * eos_amount.amount / pow(10,eos_amount.symbol.precision());   
-        // print (" EOS quantity : ", std::to_string (eos_quantity).c_str(), "\n");
-        
-        // uint64_t eos_price_quantity = SCALER * price_per_gft.amount / pow(10,price_per_gft.symbol.precision()); 
-        // print (" EOS price quantity : ", std::to_string (eos_price_quantity).c_str(), "\n");
-
-        //uint64_t scaled_gft_amount = static_cast<int64_t>(eos_amount.amount * SCALER / eos_price_quantity.amount);
-        // print (" GFT Qty : ", std::to_string (gft_quantity).c_str(), "\n");
-
-        asset gft_amount = asset { static_cast<int64_t>(gft_quantity), gft_symbol };
-        // print ("GFT Amount: ", gft_amount, "\n");
-        return gft_amount;
+        return asset { static_cast<int64_t>(gft_quantity), gft_symbol };
+        //return gft_amount;
     }
 
     void match_order (uint64_t sellorder_id, uint64_t buyorder_id)
@@ -331,43 +423,30 @@ CONTRACT gftorderbook : public contract
 
         eosio_assert (b_itr->price_per_gft >= s_itr->price_per_gft, "Buyer's price is less than the seller's price.");
 
-        config_table config (get_self(), get_self().value);
-        auto c = config.get();
-
-        asset trade_amount = asset { std::min (b_itr->gft_amount.amount,
-                                                s_itr->gft_amount.amount),
-                                      b_itr->gft_amount.symbol };
-
-        // NEED TO DECIDE HOW TO HANDLE DIFFERENCE BETWEEN BUYING AND SELLING PRICE
-        asset price = b_itr->price_per_gft;
-        //DEPLOY
+        asset gft_amount = asset { std::min (b_itr->gft_amount.amount, s_itr->gft_amount.amount),
+                                   b_itr->gft_amount.symbol };
+           
+        // if seller is market maker
         if (s_itr->created_date < b_itr->created_date) {
-            price = s_itr->price_per_gft;
+            settle_seller_maker (b_itr->buyer, s_itr->seller, s_itr->price_per_gft, gft_amount);
+        } else { // buyer is market maker
+            settle_buyer_maker(b_itr->buyer, s_itr->seller, b_itr->price_per_gft, gft_amount);
         }
-        
-        sendfrombal (c.gyftiecontract, s_itr->seller, b_itr->buyer, trade_amount, "Trade");
-        sendfrombal (c.valid_counter_token_contract, b_itr->buyer, s_itr->seller, get_eos_order_value (price, trade_amount), "Trade");
 
         if (b_itr->gft_amount == s_itr->gft_amount) {
             s_t.erase (s_itr);
             b_t.erase (b_itr);
-            // print ("Closing buy order: ", b_itr->order_id, "\n");
-            // print ("Closing sell order: ", s_itr->order_id, "\n");
         } else if (b_itr->gft_amount > s_itr->gft_amount) {
-            // print ("Decrementing amount on buy order ", b_itr->order_id, " to ", b_itr->gft_amount - s_itr->gft_amount, "\n");
             b_t.modify (b_itr, get_self(), [&](auto &b) {
                 b.gft_amount -= s_itr->gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
-            // print ("Closing sell order: ", s_itr->order_id, "\n");
             s_t.erase (s_itr);
         } else if (s_itr->gft_amount > b_itr->gft_amount) {
-            // print ("Decrementing amount on sell order ", s_itr->order_id, " to ", s_itr->gft_amount - b_itr->gft_amount, "\n");
              s_t.modify (s_itr, get_self(), [&](auto &s) {
                 s.gft_amount -= b_itr->gft_amount;
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
-            // print ("Closing buy order: ", b_itr->order_id, "\n");
             b_t.erase (b_itr);
         }
     }

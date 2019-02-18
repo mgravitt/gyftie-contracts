@@ -105,11 +105,17 @@ cleos -u http://jungle2.cryptolions.io  push action gftorderbook limitbuygft '["
 cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["bitcarbonpa1", "bitcarbonpa2", "sendtorec4", "Send tokens", "github link"]' -p bitcarbonpa1
 
 
+gyftmultisig: 15
 gyftietokens: 50
-gftorderbook: 45
+gftorderbook: 60
 gyftietokgen: 21
 danielflora3: 60
-gyftmultisig: 15
+
+received 206 - Feb 7th
+
+
+
+
 
 
 
