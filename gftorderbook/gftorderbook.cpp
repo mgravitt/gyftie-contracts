@@ -128,19 +128,30 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     processbook ();
 }
 
+ACTION gftorderbook::stacksell (name seller, asset gft_amount)
+{
+    require_auth (seller);
+    asset market_price = get_last_price ();
+
+    limitsellgft (seller, adjust_asset (market_price, 1.05000000), adjust_asset(gft_amount, 0.25000000));
+    limitsellgft (seller, adjust_asset (market_price, 1.10000000), adjust_asset(gft_amount, 0.25000000));
+    limitsellgft (seller, adjust_asset (market_price, 1.20000000), adjust_asset(gft_amount, 0.50000000));
+}
+
+ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)
+{
+    require_auth (buyer);
+    asset market_price = get_last_price ();
+
+    limitbuygft (buyer, adjust_asset (market_price, 0.95000000), get_gft_amount(adjust_asset (market_price, 0.95000000), adjust_asset(eos_amount, 0.25000000)));
+    limitbuygft (buyer, adjust_asset (market_price, 0.90000000), get_gft_amount(adjust_asset (market_price, 0.90000000), adjust_asset(eos_amount, 0.25000000)));
+    limitbuygft (buyer, adjust_asset (market_price, 0.80000000), get_gft_amount(adjust_asset (market_price, 0.80000000), adjust_asset(eos_amount, 0.50000000)));
+}
+
 ACTION gftorderbook::stack (name account, asset gft_amount, asset eos_amount)
 {
-    require_auth (account);
-
-    asset market_price = get_highest_buy ();
-
-    limitsellgft (account, adjust_asset (market_price, 1.05000000), adjust_asset(gft_amount, 0.25000000));
-    limitsellgft (account, adjust_asset (market_price, 1.10000000), adjust_asset(gft_amount, 0.25000000));
-    limitsellgft (account, adjust_asset (market_price, 1.20000000), adjust_asset(gft_amount, 0.50000000));
-
-    limitbuygft (account, adjust_asset (market_price, 0.95000000), get_gft_amount(adjust_asset (market_price, 0.95000000), adjust_asset(eos_amount, 0.25000000)));
-    limitbuygft (account, adjust_asset (market_price, 0.90000000), get_gft_amount(adjust_asset (market_price, 0.90000000), adjust_asset(eos_amount, 0.25000000)));
-    limitbuygft (account, adjust_asset (market_price, 0.80000000), get_gft_amount(adjust_asset (market_price, 0.80000000), adjust_asset(eos_amount, 0.50000000)));
+    stacksell (account, gft_amount);
+    stackbuy (account, eos_amount);
 }
 
 ACTION gftorderbook::marketbuy (name buyer, asset eos_amount) 
@@ -345,7 +356,7 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    

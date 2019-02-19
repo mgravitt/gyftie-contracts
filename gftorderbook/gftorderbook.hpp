@@ -39,6 +39,10 @@ CONTRACT gftorderbook : public contract
 
    ACTION marketsell (name seller, asset gft_amount);
 
+   ACTION stacksell (name seller, asset gft_amount);
+
+   ACTION stackbuy (name buyer, asset eos_amount);
+
    ACTION processbook ();
 
    ACTION tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward);

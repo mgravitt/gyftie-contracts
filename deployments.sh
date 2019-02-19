@@ -166,3 +166,10 @@ cleos -u https://eos.greymass.com push action gyftietokens sudoprofile '["vickie
 
 
 
+#######
+
+1. pause
+2. clearstate
+3. DEPLOY
+4. setstate
+5. unpause
