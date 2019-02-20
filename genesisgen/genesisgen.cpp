@@ -1,33 +1,36 @@
 #include "genesisgen.hpp"
 #include <math.h>
 
-ACTION genesisgen::test () 
-{
-
-}
-
 ACTION genesisgen::generate (   name from,
                                 asset gyfter_gft_balance,
                                 name to) 
 {
     asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, gyfter_gft_balance.symbol.precision())), gyfter_gft_balance.symbol};
 
-    // eosio_assert (gyfter_gft_balance <= (one_gyftie_token * 40), "Gyft feature is disabled for balances greater than 40 GFT.");
+    eosio_assert (gyfter_gft_balance < (one_gyftie_token * 10000), "Gyft feature is disabled for balances greater than 1000000 GFT.");
 
     double gyft_benefit= 0.0;
 
     if (gyfter_gft_balance  <= (one_gyftie_token * 10)) {
+        gyft_benefit = 0.30;
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 25)) {
+        gyft_benefit = 0.20;
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 50)) {
         gyft_benefit = 0.15;
     } else if (gyfter_gft_balance  <= (one_gyftie_token * 100)) {
         gyft_benefit = 0.10;
-    } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000)) {
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 250)) {
         gyft_benefit = 0.05;
-    } else if (gyfter_gft_balance  <= (one_gyftie_token * 10000)) {
-        gyft_benefit = 0.03;
-    } else if (gyfter_gft_balance  <= (one_gyftie_token * 100000)) {
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 500)) {
+        gyft_benefit = 0.025;
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000)) {
         gyft_benefit = 0.02;
-    } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000000)) {
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 2500)) {
         gyft_benefit = 0.01;
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 5000)) {
+        gyft_benefit = 0.005;
+    } else if (gyfter_gft_balance  <= (one_gyftie_token * 10000)) {
+        gyft_benefit = 0.0025;
     } 
 
     int64_t    gyft_amount = static_cast<int64_t>(gyfter_gft_balance.amount * gyft_benefit);
@@ -40,4 +43,4 @@ ACTION genesisgen::generate (   name from,
     t_t.set (t, get_self());
 }
 
-EOSIO_DISPATCH(genesisgen, (generate)(test))
+EOSIO_DISPATCH(genesisgen, (generate))
