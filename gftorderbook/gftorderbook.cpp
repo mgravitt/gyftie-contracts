@@ -92,8 +92,16 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
 {
     require_auth (buyer);
 
+    // print (" EOS order value: ", get_eos_order_value(price_per_gft, gft_amount), "\n");
+    // print (" GFT order value: ", gft_amount, "\n");
+
     confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
+
+    // print (" HERERE 1 ");
+
     increase_buygft_liquidity (get_eos_order_value(price_per_gft, gft_amount));
+
+    // print (" HERERE 2 ");
 
     buyorder_table b_t (get_self(), get_self().value);
     b_t.emplace (get_self(), [&](auto &b) {
@@ -128,14 +136,63 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     processbook ();
 }
 
+ACTION gftorderbook::stacksellprice (name seller, asset gft_amount, asset price)
+{
+    
+}
+
 ACTION gftorderbook::stacksell (name seller, asset gft_amount)
 {
-    require_auth (seller);
-    asset market_price = get_last_price ();
+    // - sell 1% of amount @ just above current best offer
+    // - sell 2% at 1% higher than above offer
+    // - sell 3% at 2% higher than above offer
+    // - sell 4% at 3% higher than above offer
+    // - sell 5% at 4% higher than above offer
 
-    limitsellgft (seller, adjust_asset (market_price, 1.05000000), adjust_asset(gft_amount, 0.25000000));
-    limitsellgft (seller, adjust_asset (market_price, 1.10000000), adjust_asset(gft_amount, 0.25000000));
-    limitsellgft (seller, adjust_asset (market_price, 1.20000000), adjust_asset(gft_amount, 0.50000000));
+    require_auth (seller);
+    asset highest_buy = get_highest_buy ();
+    //symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+
+    asset remaining_gft_to_list = gft_amount;
+
+    // print (" Highest Buy: ", highest_buy, "\n");
+    asset order_price = get_highest_buy() + asset { 200, c.valid_counter_token_symbol};
+    
+    // print (" Order Price: ", order_price, "\n");
+    float perc_to_list = 0.01000000;
+    asset order_gft = adjust_asset(gft_amount, perc_to_list);
+    // print (" Order GFT Amount: ", order_gft, "\n");
+    
+    limitsellgft (seller, order_price, order_gft);
+    remaining_gft_to_list -= adjust_asset(gft_amount, perc_to_list);
+    asset available_balance = get_available_balance (seller, gft_amount.symbol);
+    
+    while (remaining_gft_to_list.amount > 0 || remaining_gft_to_list.amount > order_gft.amount) {
+        // print (" Remaining GFT to list: ", remaining_gft_to_list, "\n");
+        order_price = adjust_asset (order_price, (1.00000000 + perc_to_list));
+        // print (" Order Price: ", order_price, "\n");
+
+        perc_to_list += 0.01000000;
+        // print (" perc_to_list, ", perc_to_list, "\n");
+
+        // print (" \n\n Minimum of the three: \n\n");
+        // print (" adjust gft amount: ",adjust_asset(gft_amount, perc_to_list).amount , "\n");
+        // print (" remaining gft to list: ", remaining_gft_to_list.amount, "\n");
+        // print (" open balance: ", getopenbalance (seller, order_gft.symbol).amount, "\n\n\n");
+
+        //order_gft = adjust_asset (gft_amount, perc_to_list);
+        order_gft = asset { std::min (adjust_asset(gft_amount, perc_to_list).amount, 
+                                        std::min(remaining_gft_to_list.amount,
+                                                    available_balance.amount))                                       
+                                        , order_gft.symbol};
+        // print (" Order GFT: ", order_gft, "\n");
+
+        limitsellgft (seller, order_price, order_gft);
+        available_balance -= order_gft;
+        remaining_gft_to_list -= order_gft;     
+    }
 }
 
 ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)

@@ -234,6 +234,28 @@ CONTRACT gftorderbook : public contract
         return total_orders;
     }
 
+    asset get_available_balance (name account, symbol sym) 
+    {
+        balance_table b_t (get_self(), account.value);
+        auto b_itr = b_t.find (sym.code().raw());
+        eosio_assert (b_itr != b_t.end(), "User does not have a balance of required asset.");
+
+        asset open_balance =  getopenbalance (account, sym);
+        return b_itr->funds - open_balance;
+    }
+
+     void confirm_balance (name account, asset min_balance) 
+    {
+        eosio_assert (get_available_balance(account, min_balance.symbol) >= min_balance, "Insufficient funds.");
+
+        // balance_table b_t (get_self(), account.value);
+        // auto b_itr = b_t.find (min_balance.symbol.code().raw());
+        // eosio_assert (b_itr != b_t.end(), "User does not have a balance of required asset.");
+
+        // asset open_balance =  getopenbalance (account, min_balance.symbol);
+        // eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
+    }
+
     void set_last_price (asset last_price)
     {
         state_table state (get_self(), get_self().value);
@@ -255,7 +277,11 @@ CONTRACT gftorderbook : public contract
         auto b_index = b_t.get_index<"byprice"_n>();
         auto b_itr = b_index.rbegin();
 
-        eosio_assert (b_itr != b_index.rend(), "No open buy orders; market price cannot be determined.");
+        if (b_itr == b_index.rend()) {
+            config_table config (get_self(), get_self().value);
+            auto c = config.get();
+            return asset {0, c.valid_counter_token_symbol};
+        }
         return b_itr->price_per_gft;
     }
 
@@ -294,15 +320,6 @@ CONTRACT gftorderbook : public contract
         State s = state.get();
         // s.eos_to_spend -= new_eos_to_spend;
         state.set (s, get_self());
-    }
-
-    void confirm_balance (name account, asset min_balance) 
-    {
-        balance_table b_t (get_self(), account.value);
-        auto b_itr = b_t.find (min_balance.symbol.code().raw());
-
-        asset open_balance =  getopenbalance (account, min_balance.symbol);
-        eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
 
     void settle_seller_maker (name buyer, name seller, asset price, asset gft_amount)
