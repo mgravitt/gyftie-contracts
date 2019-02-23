@@ -50,17 +50,17 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
-// ACTION gyftietoken::sudoprofile (name account) 
-// {
-//     require_auth (get_self());
-//     eosio_assert (is_tokenholder(account), "Account is not a token holder.");
+ACTION gyftietoken::sudoprofile (name account) 
+{
+    require_auth (get_self());
+    eosio_assert (is_tokenholder(account), "Account is not a token holder.");
 
-//     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-//     accounts a_t (get_self(), account.value);
-//     auto a_itr = a_t.find(sym.code().raw());
+    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    accounts a_t (get_self(), account.value);
+    auto a_itr = a_t.find(sym.code().raw());
 
-//     insert_profile (account, a_itr->idhash);
-// }
+    insert_profile (account, a_itr->idhash);
+}
 
 ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 {
@@ -233,10 +233,11 @@ ACTION gyftietoken::gyft (name from,
  
     asset issue_to_gyfter = t.generated_amount;
     asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
-    asset issue_to_gyftee = one_gyftie_token * 5; //getgftbalance (from);
+    asset issue_to_gyftee = one_gyftie_token * 3; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };
+    string auto_liquidity_memo { "Auto Liquidity Add to Order Book" };
 
     action (
         permission_level{get_self(), "active"_n},
@@ -254,6 +255,21 @@ ACTION gyftietoken::gyft (name from,
         permission_level{get_self(), "active"_n},
         get_self(), "issue"_n,
         std::make_tuple(to, issue_to_gyftee, to_gyftee_memo))
+    .send();
+
+    asset auto_liquidity_add = adjust_asset (issue_to_gyftee, 0.20000000);
+    print (" Auto liquidity: ", auto_liquidity_add, "\n");
+
+    action (
+        permission_level{get_self(), "active"_n},
+        get_self(), "transfer"_n,
+        std::make_tuple(to, c.gftorderbook, auto_liquidity_add, auto_liquidity_memo))
+    .send();
+
+    action (
+        permission_level{get_self(), "active"_n},
+        c.gftorderbook, "stacksell"_n,
+        std::make_tuple(to, auto_liquidity_add))
     .send();
 
     addgyft (from, to, issue_to_gyfter, issue_to_gyftee);
@@ -316,11 +332,18 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert (! is_paused(), "Contract is paused." );
 
     eosio_assert(from != to, "cannot transfer to self");
-    require_auth(from);
-    eosio_assert(is_account(to), "to account does not exist");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
+    if (to == c.gftorderbook) {
+        eosio_assert (has_auth (get_self()) || has_auth (from), "Permission denied - only token contract and token owner can transfer to order book.");
+    } else {
+        print (" Requiring authority from from\n");
+        require_auth(from);
+        print (" Authority granted from: ", from, "\n\n");
+    }
+
+    eosio_assert(is_account(to), "to account does not exist");    
     eosio_assert(is_gyftie_account(to) || c.gftorderbook == to || c.gyftie_foundation == to, "Recipient is not a Gyftie account. Must Gyft first.");
    
     if (to != c.gftorderbook || to != c.gyftie_foundation || to != get_self()) {
@@ -350,10 +373,18 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
     eosio_assert(memo.size() <= 256, "memo has more than 256 bytes");
 
-    auto payer = has_auth(to) ? to : from;
+    // print ( " Setting payer for balance: \n");
+    // name payer;
+    // if (has_auth (get_self())) {
+    //     payer = get_self();
+    // } else {
+    //     payer = has_auth(to) ? to : from;
+    // }
+
+    // print (" Payer: ", payer, "\n");
 
     sub_balance(from, quantity);
-    add_balance(to, quantity, payer);
+    add_balance(to, quantity, get_self());
 }
 
 void gyftietoken::sub_balance(name owner, asset value)
@@ -369,7 +400,7 @@ void gyftietoken::sub_balance(name owner, asset value)
     eosio_assert(existing != statstable.end(), "token with symbol does not exist, create token before issue");
     const auto &st = *existing;
 
-    from_acnts.modify(from, owner, [&](auto &a) {
+    from_acnts.modify(from, get_self(), [&](auto &a) {
         a.balance -= value;
     });
 }

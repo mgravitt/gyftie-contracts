@@ -4,6 +4,8 @@
 #include <string>
 #include <algorithm>    // std::find
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/transaction.hpp> // include this for transactions
+
 #include <math.h>
 
 using std::string;
@@ -23,6 +25,11 @@ CONTRACT gftorderbook : public contract
 
     ACTION delconfig ();
 
+    ACTION stacksellrec (name seller, asset orig_gft_amount, 
+                    asset cumulative_stacked, 
+                    asset order_gft_amount, asset price, 
+                    uint32_t next_price_adj, uint32_t next_share_adj);
+    
     ACTION clearstate ();
 
     ACTION setstate (asset last_price, asset gft_for_sale, asset eos_to_spend);
@@ -198,6 +205,17 @@ CONTRACT gftorderbook : public contract
             .send();
 
         print("---------- End Payment -------\n");
+    }
+
+    void processbook_deferred () 
+    {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+                                _self, "processbook"_n, 
+                                std::make_tuple());
+        out.delay_sec = 2;
+        uint64_t sender_id = now();
+        out.send(sender_id, _self);
     }
 
     asset getopenbalance (name account, symbol sym)

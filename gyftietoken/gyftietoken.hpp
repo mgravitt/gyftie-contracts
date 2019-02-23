@@ -20,7 +20,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION delconfig ();
 
-    // ACTION sudoprofile (name account);
+    ACTION sudoprofile (name account);
 
     ACTION addrating (name rater, name ratee, uint8_t rating);
 
@@ -190,6 +190,11 @@ CONTRACT gyftietoken : public contract
         print("---------- End Payment -------\n");
     }
 
+    asset adjust_asset (asset original_asset, float adjustment)
+    {
+        return asset { static_cast<int64_t> (original_asset.amount * adjustment), original_asset.symbol };
+    }
+    
     bool is_tokenholder (name account) 
     {
         symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};

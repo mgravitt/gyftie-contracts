@@ -21,6 +21,7 @@ cleos create account eosio holder5 EOS85AboyypCNfuENiDo8986J3tGiXMQ46m1eTimB1GDz
 cleos push action eosio updateauth '{"account":"gyftietoken","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS85AboyypCNfuENiDo8986J3tGiXMQ46m1eTimB1GDzKvVHNqWj", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gyftietoken","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gyftietoken
 cleos push action eosio updateauth '{"account":"genesisgen","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS85AboyypCNfuENiDo8986J3tGiXMQ46m1eTimB1GDzKvVHNqWj", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"genesisgen","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p genesisgen
 cleos push action eosio updateauth '{"account":"gftorderbook","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS85AboyypCNfuENiDo8986J3tGiXMQ46m1eTimB1GDzKvVHNqWj", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gftorderbook
+cleos push action eosio updateauth '{"account":"gftorderbook","permission":"owner","parent":"","auth":{"keys":[],"threshold":1,"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gftorderbook@owner
 
 cleos set contract gyftietoken gyftietoken/
 cleos set contract genesisgen genesisgen/
@@ -41,6 +42,7 @@ cleos push action gyftietoken setcounter '[0]' -p gyftietoken
 cleos push action gyftietoken unpause '[0]' -p gyftietoken
 cleos push action gftorderbook setconfig '["gyftietoken", "eosio.token", "EOS", 4]' -p gftorderbook
 cleos push action gftorderbook unpause '[]' -p gftorderbook
+cleos push action gftorderbook setstate '["5.0000 EOS", "0.00000000 GFT", "0.0000 EOS"]' -p gftorderbook
 
 cleos push action gyftietoken create '[]' -p gyftietoken
 cleos push action gyftietoken issue '["gyftietoken", "8.00000000 GFT", "memo"]' -p gyftietoken
@@ -52,9 +54,13 @@ cleos push action gyftietoken calcgyft '["holder1", "holder2"]' -p holder1
 cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345"]' -p holder1
 
 cleos push action eosio.token transfer '["holder1", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder1
-cleos push action gyftietoken transfer '["holder1", "gftorderbook", "4.30000000 GFT", "memo"]' -p holder1
-cleos push action gftorderbook limitbuygft '["holder1", "6.2000 EOS", "0.03000000 GFT"]' -p holder1
-#cleos push action gftorderbook stack '["holder1", "1.00000000 GFT", "1000.0000 EOS"]' -p holder1
+cleos push action eosio.token transfer '["holder2", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder2
+cleos push action gyftietoken transfer '["holder1", "gftorderbook", "1.00000000 GFT", "memo"]' -p holder1
+cleos push action gftorderbook limitbuygft '["holder2", "1.0000 EOS", "1.00000000 GFT"]' -p holder2
+cleos push action gftorderbook marketbuy '["holder1", "1.0000 EOS"]' -p holder1
+cleos push action gftorderbook limitbuygft '["holder2", "1.0000 EOS", "1.00000000 GFT"]' -p holder2
+
+cleos push action gftorderbook stacksell '["holder1", "1.00000000 GFT"]' -p holder1
 
 cleos push action eosio.token transfer '["holder2", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder2
 cleos push action gyftietoken transfer '["holder2", "gftorderbook", "3.00000000 GFT", "memo"]' -p holder2
@@ -75,7 +81,7 @@ cleos push action gftorderbook limitsellgft '["holder2", "5.2000 EOS", "0.300000
 cleos push action gftorderbook limitsellgft '["holder2", "5.4000 EOS", "0.20000000 GFT"]' -p holder2
 cleos push action gftorderbook limitsellgft '["holder2", "5.5000 EOS", "0.30000000 GFT"]' -p holder2
 
-cleos push action gftorderbook limitbuygft '["holder1", "6.2000 EOS", "0.03000000 GFT"]' -p holder1
+cleos push action gftorderbook limitbuygft '["holder2", "1.0000 EOS", "1.00000000 GFT"]' -p holder2
 cleos push action gftorderbook limitbuygft '["holder1", "6.1000 EOS", "0.02000000 GFT"]' -p holder1
 cleos push action gftorderbook limitbuygft '["holder1", "6.0500 EOS", "0.10000000 GFT"]' -p holder1
 cleos push action gftorderbook limitbuygft '["holder1", "5.9000 EOS", "0.08000000 GFT"]' -p holder1

@@ -132,3 +132,13 @@ cleos -u https://jungle2.cryptolions.io:443 multisig approve bitcarbonpa1 updcon
 cleos -u https://jungle2.cryptolions.io:443 multisig exec bitcarbonpa1 updcontract -p bitcabuser11
 
 cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["bitcarbonpa1", "bitcarbonpa2", "updcontract", "Update contract", "github link"]' -p bitcarbonpa1
+
+
+
+
+
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["bitcarbonpa1"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser11"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser12"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser13"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gygenesisge1"]' -p gyftietokens

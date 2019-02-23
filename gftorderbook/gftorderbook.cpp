@@ -116,9 +116,64 @@ ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amo
     processbook ();
 }
 
+ACTION gftorderbook::stacksellrec (name seller, 
+                                asset orig_gft_amount, 
+                                asset cumulative_stacked,
+                                asset order_gft_amount, asset price, 
+                                uint32_t next_price_adj, uint32_t next_share_adj)
+{
+    require_auth (get_self());
+    
+    print (" Running printme\n\n");
+
+    print (" Original GFT Amount: ", orig_gft_amount, "\n");
+    print (" Cumulative Stacked: ", cumulative_stacked, "\n");
+    print (" Order GFT: ", order_gft_amount, "\n");
+    print (" Price: ", price, "\n\n");
+    print (" next_price_adj: ", next_price_adj, "\n");
+    print (" next_share_adj: ", next_share_adj, "\n");
+    
+    if (cumulative_stacked >= orig_gft_amount) {
+        print (" Cumulative stacked is greater than or equal to orig_gft_amount\n");
+        processbook_deferred();
+        return;
+    }
+
+    if (order_gft_amount > get_available_balance (seller, order_gft_amount.symbol)) {
+        print (" Creating last limit order for: ", order_gft_amount, "\n");
+        limitsellgft(seller, price, get_available_balance (seller, order_gft_amount.symbol));
+        processbook_deferred();
+        return;
+    }
+
+    print ("--Creating limit order...\n");
+    limitsellgft (seller, price, order_gft_amount);
+
+    //print ("    Pre adjustment price: ", price, "\n");
+    asset next_price = adjust_asset (price, 1 + ( (float) next_price_adj / (float) 100));
+    //print ("    Post adjustment price: ", next_price, "\n");
+
+    asset next_order_gft = adjust_asset (orig_gft_amount, (float) next_share_adj / (float) 100);
+
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+                            _self, "stacksellrec"_n, 
+                            std::make_tuple(seller,
+                                            orig_gft_amount,
+                                            cumulative_stacked + order_gft_amount,
+                                            next_order_gft,
+                                            next_price,
+                                            next_price_adj + 1,
+                                            next_share_adj + 1));
+    out.delay_sec = 2;
+    uint64_t sender_id = now();
+    out.send(sender_id, _self);
+}
+
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
 {
-    require_auth (seller);
+    //require_auth (seller);
+    eosio_assert ( has_auth (seller) || has_auth (get_self()), "Permission denied.");
 
     confirm_balance (seller, gft_amount);
     increase_sellgft_liquidity (gft_amount);
@@ -136,11 +191,6 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     processbook ();
 }
 
-ACTION gftorderbook::stacksellprice (name seller, asset gft_amount, asset price)
-{
-    
-}
-
 ACTION gftorderbook::stacksell (name seller, asset gft_amount)
 {
     // - sell 1% of amount @ just above current best offer
@@ -149,50 +199,111 @@ ACTION gftorderbook::stacksell (name seller, asset gft_amount)
     // - sell 4% at 3% higher than above offer
     // - sell 5% at 4% higher than above offer
 
-    require_auth (seller);
-    asset highest_buy = get_highest_buy ();
-    //symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    print (" stack sell: ", gft_amount, "\n");
+
     config_table config (get_self(), get_self().value);
     auto c = config.get();
+    eosio_assert (  has_auth (seller) || 
+                    has_auth (get_self()) ||
+                    has_auth (c.gyftiecontract), "Permission denied.");
 
-    asset remaining_gft_to_list = gft_amount;
-
-    // print (" Highest Buy: ", highest_buy, "\n");
-    asset order_price = get_highest_buy() + asset { 200, c.valid_counter_token_symbol};
+    confirm_balance (seller, gft_amount);
     
-    // print (" Order Price: ", order_price, "\n");
-    float perc_to_list = 0.01000000;
-    asset order_gft = adjust_asset(gft_amount, perc_to_list);
-    // print (" Order GFT Amount: ", order_gft, "\n");
-    
-    limitsellgft (seller, order_price, order_gft);
-    remaining_gft_to_list -= adjust_asset(gft_amount, perc_to_list);
-    asset available_balance = get_available_balance (seller, gft_amount.symbol);
-    
-    while (remaining_gft_to_list.amount > 0 || remaining_gft_to_list.amount > order_gft.amount) {
-        // print (" Remaining GFT to list: ", remaining_gft_to_list, "\n");
-        order_price = adjust_asset (order_price, (1.00000000 + perc_to_list));
-        // print (" Order Price: ", order_price, "\n");
+    asset price = get_highest_buy() + asset { 200, c.valid_counter_token_symbol};
 
-        perc_to_list += 0.01000000;
-        // print (" perc_to_list, ", perc_to_list, "\n");
+    float share = 0.01000000;
 
-        // print (" \n\n Minimum of the three: \n\n");
-        // print (" adjust gft amount: ",adjust_asset(gft_amount, perc_to_list).amount , "\n");
-        // print (" remaining gft to list: ", remaining_gft_to_list.amount, "\n");
-        // print (" open balance: ", getopenbalance (seller, order_gft.symbol).amount, "\n\n\n");
+    asset order_gft = adjust_asset(gft_amount, share);
 
-        //order_gft = adjust_asset (gft_amount, perc_to_list);
-        order_gft = asset { std::min (adjust_asset(gft_amount, perc_to_list).amount, 
-                                        std::min(remaining_gft_to_list.amount,
-                                                    available_balance.amount))                                       
-                                        , order_gft.symbol};
-        // print (" Order GFT: ", order_gft, "\n");
+    //
 
-        limitsellgft (seller, order_price, order_gft);
-        available_balance -= order_gft;
-        remaining_gft_to_list -= order_gft;     
-    }
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+                            _self, "stacksellrec"_n, 
+                            std::make_tuple(seller,
+                                            gft_amount,
+                                            gft_amount * 0,
+                                            order_gft,
+                                            price,
+                                            1,
+                                            1));
+    out.delay_sec = 2;
+    uint64_t sender_id = now();
+    out.send(sender_id, _self);
+
+    // 
+
+        // stacksell (seller,
+        //             gft_amount - order_gft, 
+        //             adjust_asset (price, 1 + next_price_adj),
+        //             0.01000000,
+        //             share + 0.01000000);
+
+        // asset next_order_gft = gft_amount - order_gft;
+        // asset next_price = adjust_asset (price, 1 + next_price_adj);
+        // float npa = 0.01;
+        // float next_share = share + 0.01;
+
+        // print (" Next Order GFT: ", next_order_gft, "\n");
+        // print (" Next Price: ", next_price, "\n");
+        // print (" NPA: ", npa, "\n");
+        // print (" Next share: ", next_share, "\n");
+
+        //uint64_t payload = itr->xfer_id;
+    //     eosio::transaction out{};
+    //    // deferfunc_args a = {.payload = payload};
+    //     out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+    //                             _self, "stacksell"_n, 
+    //                             std::make_tuple(seller,
+    //                                             next_order_gft,
+    //                                             next_price,
+    //                                             npa,
+    //                                             next_share));
+
+                    
+    //     out.delay_sec = 2;
+    //     uint64_t sender_id = now();
+    //     out.send(sender_id, _self);
+
+    // eosio::transaction out{};
+    // out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+    //                         _self, "printme"_n, 
+    //                         std::make_tuple(seller,
+    //                                         gft_amount,
+    //                                         next_order_gft,
+    //                                         next_price,
+    //                                         npa,
+    //                                         next_share));
+    // out.delay_sec = 2;
+    // uint64_t sender_id = now();
+    // out.send(sender_id, _self);
+
+    //     print (" Submitting deferred transaction\n\n ");
+        // eosio::transaction t{};
+
+        // t.actions.emplace_back(
+        //     permission_level(get_self(), "owner"_n),
+        //     get_self(),
+        //     // action to invoke
+        //     "stacksell"_n,
+        //     // arguments for the action
+        //     std::make_tuple(seller,
+        //             gft_amount - order_gft, 
+        //             adjust_asset (price, 1 + next_price_adj),
+        //             0.01000000,
+        //             share + 0.01000000));
+
+        // // set delay in seconds
+        // t.delay_sec = 1;
+
+        // // first argument is a unique sender id
+        // // second argument is account paying for RAM
+        // // third argument can specify whether an in-flight transaction
+        // // with this senderId should be replaced
+        // // if set to false and this senderId already exists
+        // // this action will fail
+        // t.send(now(), get_self() /*, false */);
+    // }
 }
 
 ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)
@@ -207,7 +318,7 @@ ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)
 
 ACTION gftorderbook::stack (name account, asset gft_amount, asset eos_amount)
 {
-    stacksell (account, gft_amount);
+    // stacksell (account, gft_amount);
     stackbuy (account, eos_amount);
 }
 
@@ -414,7 +525,7 @@ extern "C" {
         if (code == receiver) {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)
-                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    
         }

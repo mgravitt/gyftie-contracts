@@ -88,16 +88,16 @@ cleos -u https://eos.greymass.com set account permission gyftietokgen owner '{"t
 
 # Step 2 - will need Github ID
 cleos -u https://eos.greymass.com set contract -sjd -x 86400 gftorderbook gftorderbook/ > trx.json
-cleos -u https://eos.greymass.com multisig propose_trx gftpermbug '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
-cleos -u https://eos.greymass.com multisig review zombiejigsaw gftpermbug
-cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "gftpermbug", "Fix GFT Order Book permissions bug", "https://github.com/digital-scarcity/gyftie/commit/094bbb3e7f31f9a3222fad8dd743d92f1d27ace0"]' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig propose_trx newmonpol '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com multisig review zombiejigsaw newmonpol
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "newmonpol", "Update monetary policy per proposal", "https://github.com/gravitt8460/gyftie/commit/735f429a715d9f7a28cb359fa08a3eed77849d45"]' -p zombiejigsaw
 
 # Step 3 
 Daniel approve via Scatter on UI
 
 # Step 4 - Approve and Execute
-cleos -u https://eos.greymass.com multisig approve zombiejigsaw gftpermbug '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
-cleos -u https://eos.greymass.com multisig exec zombiejigsaw upgyftben -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig approve zombiejigsaw newmonpol '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig exec zombiejigsaw newmonpol -p zombiejigsaw
 
 
 
