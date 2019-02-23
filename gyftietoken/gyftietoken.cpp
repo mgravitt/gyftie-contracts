@@ -257,9 +257,8 @@ ACTION gyftietoken::gyft (name from,
         std::make_tuple(to, issue_to_gyftee, to_gyftee_memo))
     .send();
 
+    // Add 20% of Gyft'ed balance to the order book
     asset auto_liquidity_add = adjust_asset (issue_to_gyftee, 0.20000000);
-    print (" Auto liquidity: ", auto_liquidity_add, "\n");
-
     action (
         permission_level{get_self(), "active"_n},
         get_self(), "transfer"_n,
@@ -338,9 +337,7 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     if (to == c.gftorderbook) {
         eosio_assert (has_auth (get_self()) || has_auth (from), "Permission denied - only token contract and token owner can transfer to order book.");
     } else {
-        print (" Requiring authority from from\n");
         require_auth(from);
-        print (" Authority granted from: ", from, "\n\n");
     }
 
     eosio_assert(is_account(to), "to account does not exist");    
@@ -372,16 +369,6 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     eosio_assert(quantity.amount > 0, "must transfer positive quantity");
     eosio_assert(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
     eosio_assert(memo.size() <= 256, "memo has more than 256 bytes");
-
-    // print ( " Setting payer for balance: \n");
-    // name payer;
-    // if (has_auth (get_self())) {
-    //     payer = get_self();
-    // } else {
-    //     payer = has_auth(to) ? to : from;
-    // }
-
-    // print (" Payer: ", payer, "\n");
 
     sub_balance(from, quantity);
     add_balance(to, quantity, get_self());
