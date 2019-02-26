@@ -4,6 +4,8 @@
 #include <string>
 #include <algorithm>    // std::find
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/transaction.hpp> // include this for transactions
+
 #include <math.h>
 
 using std::string;
@@ -23,6 +25,11 @@ CONTRACT gftorderbook : public contract
 
     ACTION delconfig ();
 
+    ACTION stacksellrec (name seller, asset orig_gft_amount, 
+                    asset cumulative_stacked, 
+                    asset order_gft_amount, asset price, 
+                    uint32_t next_price_adj, uint32_t next_share_adj);
+    
     ACTION clearstate ();
 
     ACTION setstate (asset last_price, asset gft_for_sale, asset eos_to_spend);
@@ -39,6 +46,10 @@ CONTRACT gftorderbook : public contract
 
    ACTION marketsell (name seller, asset gft_amount);
 
+   ACTION stacksell (name seller, asset gft_amount);
+
+   ACTION stackbuy (name buyer, asset eos_amount);
+
    ACTION processbook ();
 
    ACTION tradeexec (name buyer, name seller, name market_maker, asset gft_amount, asset price, asset maker_reward);
@@ -47,7 +58,11 @@ CONTRACT gftorderbook : public contract
 
    ACTION delbuyorder (uint64_t buyorder_id);
 
+  // ACTION delbuyorders (uint64_t low_buyorder_id, uint64_t high_buyorder_id);
+
    ACTION delsellorder (uint64_t sellorder_id);
+
+   ACTION delsorders (uint64_t low_sellorder_id, uint64_t high_sellorder_id);
 
    ACTION admindelbo (uint64_t buyorder_id);
 
@@ -196,6 +211,17 @@ CONTRACT gftorderbook : public contract
         print("---------- End Payment -------\n");
     }
 
+    void processbook_deferred () 
+    {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{_self, "owner"_n}, 
+                                _self, "processbook"_n, 
+                                std::make_tuple());
+        out.delay_sec = 2;
+        uint64_t sender_id = now();
+        out.send(sender_id, _self);
+    }
+
     asset getopenbalance (name account, symbol sym)
     {
         asset total_orders = asset {0, sym};
@@ -230,6 +256,28 @@ CONTRACT gftorderbook : public contract
         return total_orders;
     }
 
+    asset get_available_balance (name account, symbol sym) 
+    {
+        balance_table b_t (get_self(), account.value);
+        auto b_itr = b_t.find (sym.code().raw());
+        eosio_assert (b_itr != b_t.end(), "User does not have a balance of required asset.");
+
+        asset open_balance =  getopenbalance (account, sym);
+        return b_itr->funds - open_balance;
+    }
+
+     void confirm_balance (name account, asset min_balance) 
+    {
+        eosio_assert (get_available_balance(account, min_balance.symbol) >= min_balance, "Insufficient funds.");
+
+        // balance_table b_t (get_self(), account.value);
+        // auto b_itr = b_t.find (min_balance.symbol.code().raw());
+        // eosio_assert (b_itr != b_t.end(), "User does not have a balance of required asset.");
+
+        // asset open_balance =  getopenbalance (account, min_balance.symbol);
+        // eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
+    }
+
     void set_last_price (asset last_price)
     {
         state_table state (get_self(), get_self().value);
@@ -251,7 +299,11 @@ CONTRACT gftorderbook : public contract
         auto b_index = b_t.get_index<"byprice"_n>();
         auto b_itr = b_index.rbegin();
 
-        eosio_assert (b_itr != b_index.rend(), "No open buy orders; market price cannot be determined.");
+        if (b_itr == b_index.rend()) {
+            config_table config (get_self(), get_self().value);
+            auto c = config.get();
+            return asset {0, c.valid_counter_token_symbol};
+        }
         return b_itr->price_per_gft;
     }
 
@@ -290,15 +342,6 @@ CONTRACT gftorderbook : public contract
         State s = state.get();
         // s.eos_to_spend -= new_eos_to_spend;
         state.set (s, get_self());
-    }
-
-    void confirm_balance (name account, asset min_balance) 
-    {
-        balance_table b_t (get_self(), account.value);
-        auto b_itr = b_t.find (min_balance.symbol.code().raw());
-
-        asset open_balance =  getopenbalance (account, min_balance.symbol);
-        eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
 
     void settle_seller_maker (name buyer, name seller, asset price, asset gft_amount)

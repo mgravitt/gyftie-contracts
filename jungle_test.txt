@@ -22,7 +22,7 @@ gygenesisge1
 
 cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gyftietokens","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gyftietokens","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gyftietokens
 cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gygenesisge1","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gygenesisge1","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gygenesisge1
-cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gftorderbook","permission":"active","parent":"owner","auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gftorderbook
+cleos -u http://jungle2.cryptolions.io push action eosio updateauth '{"account":"gftorderbook","permission":"owner",,"auth":{"keys":[{"key":"EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gftorderbook
 
 
 http://jungle2.cryptolions.io
@@ -78,8 +78,8 @@ cleos -u http://jungle2.cryptolions.io push action gyftietokens voteagainst '["g
 cleos -u http://jungle2.cryptolions.io push action gyftietokens vote '["gyftieuser12", 0]' -p gyftieuser12
 cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens configs
 
-cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "bitcarbonpa2"]' -p gyftieuser11
-cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "bitcarbonpa2", "idhash54321", "memo"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "bitcarbonpa3"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "bitcarbonpa3", "idhash54321", "memo"]' -p gyftieuser11
 
 
 cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser11
@@ -115,6 +115,7 @@ received 206 - Feb 7th
 
 
 
+cleos -u https://jungle2.cryptolions.io:443 set account permission gftorderbook owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1},{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gygenesisge1@owner
 
 
 
@@ -131,3 +132,13 @@ cleos -u https://jungle2.cryptolions.io:443 multisig approve bitcarbonpa1 updcon
 cleos -u https://jungle2.cryptolions.io:443 multisig exec bitcarbonpa1 updcontract -p bitcabuser11
 
 cleos -u http://jungle2.cryptolions.io  push action gyftmultisig addproposal '["bitcarbonpa1", "bitcarbonpa2", "updcontract", "Update contract", "github link"]' -p bitcarbonpa1
+
+
+
+
+
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["bitcarbonpa1"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser11"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser12"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gyftieuser13"]' -p gyftietokens
+cleos -u https://jungle2.cryptolions.io:443 push action gyftietokens sudoprofile '["gygenesisge1"]' -p gyftietokens

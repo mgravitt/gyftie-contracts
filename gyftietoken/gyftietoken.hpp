@@ -20,7 +20,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION delconfig ();
 
-    // ACTION sudoprofile (name account);
+    ACTION sudoprofile (name account);
 
     ACTION addrating (name rater, name ratee, uint8_t rating);
 
@@ -32,10 +32,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION calcgyft (name from, name to);
     
-    ACTION gyft (name from, name to, string idhash);
-
-    ACTION addgyft (name gyfter, name gyftee, asset gyfter_issue,
-                                asset gyftee_issue);
+    ACTION gyft (name from, name to, string idhash, string relationship);
 
     ACTION propose (name proposer, string notes);
 
@@ -132,19 +129,21 @@ CONTRACT gyftietoken : public contract
     };
     typedef eosio::multi_index<"availratings"_n, availrating> availrating_table;
     
+    TABLE gyftevent 
+    {
+        uint64_t    gyft_id;
+        name        gyfter;
+        name        gyftee;
+        asset       gyfter_issue;
+        asset       gyftee_issue;
+        string      relationship;
+        string      notes;
+        uint32_t    gyft_date;
+        uint16_t    likes;
+        uint64_t    primary_key() const { return gyft_id; }
+    };
 
-    // TABLE gyft 
-    // {
-    //     uint64_t    gyft_id;
-    //     name        gyfter;
-    //     name        gyftee;
-    //     asset       gyfter_issue;
-    //     asset       gyftee_issue;
-    //     uint32_t    gyft_date;
-    //     uint64_t    primary_key() const { return gyft_id; }
-    // };
-
-    // typedef eosio::multi_index<"gyfts"_n, gyft> gyft_table;
+    typedef eosio::multi_index<"gyfts"_n, gyftevent> gyft_table;
 
     TABLE currency_stats
     {
@@ -188,6 +187,29 @@ CONTRACT gyftietoken : public contract
             .send();
 
         print("---------- End Payment -------\n");
+    }
+
+
+    ACTION addgyft (name gyfter, name gyftee, asset gyfter_issue,
+                                    asset gyftee_issue, string relationship) 
+    {
+        gyft_table g_t (get_self(), get_self().value);
+        g_t.emplace (get_self(), [&](auto &g) {
+            g.gyft_id   = g_t.available_primary_key();
+            g.gyfter = gyfter;
+            g.gyftee = gyftee;
+            g.gyfter_issue = gyfter_issue;
+            g.gyftee_issue = gyftee_issue;
+            g.relationship = relationship;
+           // g.notes = notes;
+            g.gyft_date = now();
+        });
+    }
+
+
+    asset adjust_asset (asset original_asset, float adjustment)
+    {
+        return asset { static_cast<int64_t> (original_asset.amount * adjustment), original_asset.symbol };
     }
 
     bool is_tokenholder (name account) 
