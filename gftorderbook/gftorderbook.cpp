@@ -307,7 +307,8 @@ ACTION gftorderbook::delsellorder (uint64_t sellorder_id)
     auto s_itr = s_t.find (sellorder_id);
     eosio_assert (s_itr != s_t.end(), "Sell Order ID does not exist.");
 
-    require_auth (s_itr->seller);
+    eosio_assert (  has_auth (s_itr->seller) || 
+                    has_auth (get_self()), "Permission denied.");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -315,6 +316,13 @@ ACTION gftorderbook::delsellorder (uint64_t sellorder_id)
     sendfrombal (c.gyftiecontract, s_itr->seller, s_itr->seller, s_itr->gft_amount, "Cancelled Sell Order");
 
     s_t.erase (s_itr);
+}
+
+ACTION gftorderbook::delsorders (uint64_t low_sellorder_id, uint64_t high_sellorder_id)
+{
+    for (int64_t order_id = low_sellorder_id; order_id <= high_sellorder_id; order_id++) {
+        delsellorder (order_id);
+    }
 }
 
 ACTION gftorderbook::removeorders () 
@@ -421,7 +429,7 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate))
             }    

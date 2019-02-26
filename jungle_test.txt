@@ -78,8 +78,8 @@ cleos -u http://jungle2.cryptolions.io push action gyftietokens voteagainst '["g
 cleos -u http://jungle2.cryptolions.io push action gyftietokens vote '["gyftieuser12", 0]' -p gyftieuser12
 cleos -u http://jungle2.cryptolions.io get table gyftietokens gyftietokens configs
 
-cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "bitcarbonpa2"]' -p gyftieuser11
-cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "bitcarbonpa2", "idhash54321", "memo"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens calcgyft '["gyftieuser11", "bitcarbonpa3"]' -p gyftieuser11
+cleos -u http://jungle2.cryptolions.io push action gyftietokens gyft '["gyftieuser11", "bitcarbonpa3", "idhash54321", "memo"]' -p gyftieuser11
 
 
 cleos -u http://jungle2.cryptolions.io push action gftorderbook limitsellgft '["gyftieuser11", "7.0000 EOS", "0.10000000 GFT"]' -p gyftieuser11

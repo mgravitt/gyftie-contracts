@@ -48,10 +48,10 @@ cleos push action gyftietoken create '[]' -p gyftietoken
 cleos push action gyftietoken issue '["gyftietoken", "8.00000000 GFT", "memo"]' -p gyftietoken
 
 cleos push action gyftietoken calcgyft '["gyftietoken", "holder1"]' -p gyftietoken
-cleos push action gyftietoken gyft '["gyftietoken", "holder1", "idhash12345"]' -p gyftietoken
+cleos push action gyftietoken gyft '["gyftietoken", "holder1", "idhash12345", "friend"]' -p gyftietoken
 
 cleos push action gyftietoken calcgyft '["holder1", "holder2"]' -p holder1
-cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345"]' -p holder1
+cleos push action gyftietoken gyft '["holder1", "holder2", "idhash12345", "friend"]' -p holder1
 
 cleos push action eosio.token transfer '["holder1", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder1
 cleos push action eosio.token transfer '["holder2", "gftorderbook", "10000.0000 EOS", "should succeed"]' -p holder2
@@ -81,7 +81,7 @@ cleos push action gftorderbook limitsellgft '["holder2", "5.2000 EOS", "0.300000
 cleos push action gftorderbook limitsellgft '["holder2", "5.4000 EOS", "0.20000000 GFT"]' -p holder2
 cleos push action gftorderbook limitsellgft '["holder2", "5.5000 EOS", "0.30000000 GFT"]' -p holder2
 
-cleos push action gftorderbook limitbuygft '["holder2", "1.0000 EOS", "1.00000000 GFT"]' -p holder2
+cleos push action gftorderbook limitbuygft '["holder2", "2.5000 EOS", "1.00000000 GFT"]' -p holder2
 cleos push action gftorderbook limitbuygft '["holder1", "6.1000 EOS", "0.02000000 GFT"]' -p holder1
 cleos push action gftorderbook limitbuygft '["holder1", "6.0500 EOS", "0.10000000 GFT"]' -p holder1
 cleos push action gftorderbook limitbuygft '["holder1", "5.9000 EOS", "0.08000000 GFT"]' -p holder1
@@ -149,3 +149,7 @@ cleos push action gyftietoken gyft '["holder3", "holder4", "idhash54321", "memo"
 cleos set account permission gftorderbook active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gftorderbook@owner
 cleos set account permission gftorderbook owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gftorderbook@owner
 
+
+
+cleos push action gyftietoken issue '["holder1", "80.00000000 GFT", "memo"]' -p gyftietoken
+cleos push action gyftietoken transfer '["holder1", "gftorderbook", "10.00000000 GFT", "memo"]' -p holder1

@@ -88,17 +88,66 @@ cleos -u https://eos.greymass.com set account permission gyftietokgen owner '{"t
 
 # Step 2 - will need Github ID
 cleos -u https://eos.greymass.com set contract -sjd -x 86400 gftorderbook gftorderbook/ > trx.json
-cleos -u https://eos.greymass.com multisig propose_trx newmonpol '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
-cleos -u https://eos.greymass.com multisig review zombiejigsaw newmonpol
-cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "newmonpol", "Update monetary policy per proposal", "https://github.com/gravitt8460/gyftie/commit/735f429a715d9f7a28cb359fa08a3eed77849d45"]' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig propose_trx adddelso '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com multisig review zombiejigsaw adddelso
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "adddelso", "Added delete sell order functionality", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
 
 # Step 3 
 Daniel approve via Scatter on UI
 
 # Step 4 - Approve and Execute
-cleos -u https://eos.greymass.com multisig approve zombiejigsaw newmonpol '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
-cleos -u https://eos.greymass.com multisig exec zombiejigsaw newmonpol -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig approve zombiejigsaw adddelso '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig exec zombiejigsaw batch1 -p zombiejigsaw
 
+###############
+
+cleos -u https://eos.greymass.com push action -sjd -x 86400 gftorderbook delsorders '[130,145]' -p gftorderbook > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx batch1 '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "batch11", "Remove orders 130-145", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+
+cleos -u https://eos.greymass.com push action -sjd -x 86400 gftorderbook delsorders '[116,129]' -p gftorderbook > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx batch21 '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "batch21", "Remove orders 116-129", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+
+cleos -u https://eos.greymass.com push action -sjd -x 86400 gftorderbook delsorders '[101,115]' -p gftorderbook > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx batch31 '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "batch31", "Remove orders 101-115", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+
+cleos -u https://eos.greymass.com push action -sjd -x 86400 gftorderbook delsorders '[86,100]' -p gftorderbook > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx batch42 '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "batch42", "Remove orders 86-100", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+
+cleos -u https://eos.greymass.com push action -sjd -x 86400 gftorderbook delsorders '[71,85]' -p gftorderbook > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx batch51 '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "batch51", "Remove orders 71-85", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch1 -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch2  -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch3 -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch4  -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch5  -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch41  -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig cancel zombiejigsaw batch411  -p zombiejigsaw
+
+
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[0]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[1]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[2]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[3]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[4]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[5]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[6]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[7]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[8]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[9]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[10]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[11]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[12]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[13]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[14]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[15]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[16]'  -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig delproposal '[17]'  -p zombiejigsaw
 
 
 

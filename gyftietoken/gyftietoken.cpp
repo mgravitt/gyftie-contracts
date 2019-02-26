@@ -91,10 +91,11 @@ ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 
 ACTION gyftietoken::removeprop (uint64_t proposal_id) 
 {
-    require_auth (get_self());
     proposal_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find(proposal_id);
     eosio_assert (p_itr != p_t.end(), "Proposal ID is not found.");
+
+    eosio_assert (has_auth (get_self()) || has_auth (p_itr->proposer), "Permission denied - only token contract or proposer can remove a proposal.");
 
     p_t.erase (p_itr);
 }
@@ -178,22 +179,6 @@ ACTION gyftietoken::voteagainst (name voter,
     });
 }
 
-ACTION gyftietoken::addgyft (name gyfter, name gyftee, asset gyfter_issue,
-                                asset gyftee_issue) 
-{
-    // require_auth (get_self());
-
-    // gyft_table g_t (get_self(), get_self().value);
-    // g_t.emplace (get_self(), [&](auto &g) {
-    //     g.gyft_id   = g_t.available_primary_key();
-    //     g.gyfter = gyfter;
-    //     g.gyftee = gyftee;
-    //     g.gyfter_issue = gyfter_issue;
-    //     g.gyftee_issue = gyftee_issue;
-    //     g.gyft_date = now();
-    // });
-}
-
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
     eosio_assert (! is_paused(), "Contract is paused." );
@@ -213,7 +198,8 @@ ACTION gyftietoken::calcgyft (name from, name to)
 
 ACTION gyftietoken::gyft (name from, 
                             name to, 
-                            string idhash) 
+                            string idhash,
+                            string relationship) 
 {
     eosio_assert (! is_paused(), "Contract is paused." );
 
@@ -258,20 +244,20 @@ ACTION gyftietoken::gyft (name from,
     .send();
 
     // Add 20% of Gyft'ed balance to the order book
-    asset auto_liquidity_add = adjust_asset (issue_to_gyftee, 0.20000000);
-    action (
-        permission_level{get_self(), "active"_n},
-        get_self(), "transfer"_n,
-        std::make_tuple(to, c.gftorderbook, auto_liquidity_add, auto_liquidity_memo))
-    .send();
+    // asset auto_liquidity_add = adjust_asset (issue_to_gyftee, 0.20000000);
+    // action (
+    //     permission_level{get_self(), "active"_n},
+    //     get_self(), "transfer"_n,
+    //     std::make_tuple(to, c.gftorderbook, auto_liquidity_add, auto_liquidity_memo))
+    // .send();
 
-    action (
-        permission_level{get_self(), "active"_n},
-        c.gftorderbook, "stacksell"_n,
-        std::make_tuple(to, auto_liquidity_add))
-    .send();
+    // action (
+    //     permission_level{get_self(), "active"_n},
+    //     c.gftorderbook, "stacksell"_n,
+    //     std::make_tuple(to, auto_liquidity_add))
+    // .send();
 
-    addgyft (from, to, issue_to_gyfter, issue_to_gyftee);
+    addgyft (from, to, issue_to_gyfter, issue_to_gyftee, relationship);
 }
 
 ACTION gyftietoken::create()
@@ -420,6 +406,6 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 }
 
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(addgyft)
-                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)//(sudoprofile)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
                             (removeprop)(setcounter))

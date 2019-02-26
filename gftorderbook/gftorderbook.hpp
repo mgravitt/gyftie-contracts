@@ -58,7 +58,11 @@ CONTRACT gftorderbook : public contract
 
    ACTION delbuyorder (uint64_t buyorder_id);
 
+  // ACTION delbuyorders (uint64_t low_buyorder_id, uint64_t high_buyorder_id);
+
    ACTION delsellorder (uint64_t sellorder_id);
+
+   ACTION delsorders (uint64_t low_sellorder_id, uint64_t high_sellorder_id);
 
    ACTION admindelbo (uint64_t buyorder_id);
 
