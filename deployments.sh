@@ -78,6 +78,9 @@ cleos -u https://eos.greymass.com push action gftorderbook unpause '[]' -p gftor
 cleos -u https://eos.greymass.com set account permission gftorderbook active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gftorderbook@owner
 cleos -u https://eos.greymass.com set account permission gftorderbook owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gftorderbook","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gftorderbook@owner
 
+cleos -u https://eos.greymass.com set account permission gyftietokens active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gyftietokens@owner
+cleos -u https://eos.greymass.com set account permission gyftietokens owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gyftietokens","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gyftietokens@owner
+
 
 
 
@@ -87,16 +90,16 @@ cleos -u https://eos.greymass.com set account permission gyftietokgen owner '{"t
 
 
 # Step 2 - will need Github ID
-cleos -u https://eos.greymass.com set contract -sjd -x 86400 gftorderbook gftorderbook/ > trx.json
-cleos -u https://eos.greymass.com multisig propose_trx adddelso '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
+cleos -u https://eos.greymass.com set contract -sjd -x 86400 gyftietokgen genesisgen/ > trx.json
+cleos -u https://eos.greymass.com multisig propose_trx newmonpo '[{"actor": "zombiejigsaw", "permission": "active"}, {"actor": "danielflora3", "permission": "active"}]' ./trx.json zombiejigsaw
 cleos -u https://eos.greymass.com multisig review zombiejigsaw adddelso
-cleos -u https://eos.greymass.com  push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "adddelso", "Added delete sell order functionality", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
+cleos -u https://eos.greymass.com push action gyftmultisig addproposal '["zombiejigsaw", "danielflora3", "newmonpo", "New monetary policy", "https://github.com/gravitt8460/gyftie/commit/269a28ed04aa34c9992ae2c69b1274f296fa1bc0"]' -p zombiejigsaw
 
 # Step 3 
 Daniel approve via Scatter on UI
 
 # Step 4 - Approve and Execute
-cleos -u https://eos.greymass.com multisig approve zombiejigsaw adddelso '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
+cleos -u https://eos.greymass.com multisig approve zombiejigsaw newmonpo '{"actor": "zombiejigsaw", "permission": "active"}' -p zombiejigsaw
 cleos -u https://eos.greymass.com multisig exec zombiejigsaw batch1 -p zombiejigsaw
 
 ###############

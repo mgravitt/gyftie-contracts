@@ -12,3 +12,4 @@ tools/node_modules
 gyftie-mainnet
 **/node_modules
 trx.json
+package-lock.json
