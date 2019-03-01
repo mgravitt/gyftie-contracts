@@ -181,7 +181,7 @@ CONTRACT gyftietoken : public contract
         print("Memo             : ", memo, "\n");
 
         action(
-            permission_level{from, "active"_n},
+            permission_level{from, "owner"_n},
             token_contract, "transfer"_n,
             std::make_tuple(from, to, token_amount, memo))
             .send();

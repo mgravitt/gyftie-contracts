@@ -81,6 +81,7 @@ cleos -u https://eos.greymass.com set account permission gftorderbook owner '{"t
 cleos -u https://eos.greymass.com set account permission gyftietokens active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"danielflora3","permission":"active"},"weight":1},{"permission":{"actor":"zombiejigsaw","permission":"active"},"weight":1}],"waits":[]}' owner -p gyftietokens@owner
 cleos -u https://eos.greymass.com set account permission gyftietokens owner '{"threshold":1,"keys":[],"accounts":[{"permission":{"actor":"gyftietokens","permission":"eosio.code"},"weight":1}],"waits":[]}'  -p gyftietokens@owner
 
+cleos push action eosio updateauth '{"account":"gyftietokens","permission":"owner","parent":"","auth":{"keys":[{"key":"EOS68iaRxcJev74WxV8cjoECvHyMxTCSE5NxUTktqKzpCi5JhC5b9", "weight":1}],"threshold":1,"accounts":[{"permission":{"actor":"gyftietokens","permission":"eosio.code"},"weight":1}],"waits":[]}}' -p gyftietokens@owner
 
 
 

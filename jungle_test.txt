@@ -4,7 +4,7 @@ alias cleos='docker exec -it contracts_nodeosd_1 /opt/eosio/bin/cleos -u http://
 
 
 Keys:
-Private key: 
+Private key: 5KAunQfsUCTrfy3cCdNyW5mMNnMSkH5EMP45oEjF2B6xKacoC3x
 Public key: EOS8cgMyCekL7JbASBfbRrL8wLDjUnvD8VNrn93onL7NAxcKJPVLA
 
 

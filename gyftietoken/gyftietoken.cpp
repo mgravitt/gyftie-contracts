@@ -95,7 +95,11 @@ ACTION gyftietoken::removeprop (uint64_t proposal_id)
     auto p_itr = p_t.find(proposal_id);
     eosio_assert (p_itr != p_t.end(), "Proposal ID is not found.");
 
-    eosio_assert (has_auth (get_self()) || has_auth (p_itr->proposer), "Permission denied - only token contract or proposer can remove a proposal.");
+    eosio_assert (  has_auth (get_self()) || 
+                    has_auth (p_itr->proposer) ||
+                    has_auth ("danielflora3"_n) ||
+                    has_auth ("zombiejigsaw"_n),    
+        "Permission denied - only Gyftie signatory or proposer can remove a proposal.");
 
     p_t.erase (p_itr);
 }
@@ -190,7 +194,7 @@ ACTION gyftietoken::calcgyft (name from, name to)
     auto c = config.get();
 
     action(
-        permission_level{get_self(), "active"_n},
+        permission_level{get_self(), "owner"_n},
         c.token_gen, "generate"_n,
         std::make_tuple(from, getgftbalance (from), to))
     .send();
@@ -219,26 +223,26 @@ ACTION gyftietoken::gyft (name from,
  
     asset issue_to_gyfter = t.generated_amount;
     asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
-    asset issue_to_gyftee = one_gyftie_token * 3; //getgftbalance (from);
+    asset issue_to_gyftee = one_gyftie_token; //getgftbalance (from);
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };
     string auto_liquidity_memo { "Auto Liquidity Add to Order Book" };
 
     action (
-        permission_level{get_self(), "active"_n},
+        permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
         std::make_tuple(from, issue_to_gyfter, to_gyfter_memo))
     .send();
 
     action (
-        permission_level{get_self(), "active"_n},
+        permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
         std::make_tuple(c.gyftie_foundation, issue_to_gyfter + issue_to_gyftee, to_gyfter_memo))
     .send();
 
     action (
-        permission_level{get_self(), "active"_n},
+        permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
         std::make_tuple(to, issue_to_gyftee, to_gyftee_memo))
     .send();
@@ -246,13 +250,13 @@ ACTION gyftietoken::gyft (name from,
     // Add 20% of Gyft'ed balance to the order book
     // asset auto_liquidity_add = adjust_asset (issue_to_gyftee, 0.20000000);
     // action (
-    //     permission_level{get_self(), "active"_n},
+    //     permission_level{get_self(), "owner"_n},
     //     get_self(), "transfer"_n,
     //     std::make_tuple(to, c.gftorderbook, auto_liquidity_add, auto_liquidity_memo))
     // .send();
 
     // action (
-    //     permission_level{get_self(), "active"_n},
+    //     permission_level{get_self(), "owner"_n},
     //     c.gftorderbook, "stacksell"_n,
     //     std::make_tuple(to, auto_liquidity_add))
     // .send();
@@ -307,7 +311,7 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
 
     if (to != st.issuer)
     {
-        SEND_INLINE_ACTION(*this, transfer, {st.issuer, "active"_n}, {st.issuer, to, quantity, memo});
+        SEND_INLINE_ACTION(*this, transfer, {st.issuer, "owner"_n}, {st.issuer, to, quantity, memo});
     }
 }
 
