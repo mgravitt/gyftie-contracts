@@ -13,3 +13,6 @@ gyftie-mainnet
 **/node_modules
 trx.json
 package-lock.json
+deployments.sh
+jungle_test.sh
+gyftie.sh
