@@ -25,6 +25,15 @@ CONTRACT gftorderbook : public contract
 
     ACTION delconfig ();
 
+    ACTION setrewconfig (uint64_t inflation_share, uint64_t proximity_weight,
+                            uint64_t bucket_size_weight);
+
+    ACTION addbucket (uint64_t prox_bucket_min, uint64_t prox_bucket_max);
+
+    ACTION buildbucket (uint64_t bucket_id);
+
+    ACTION buildbuckets ();
+
     ACTION stacksellrec (name seller, asset orig_gft_amount, 
                     asset cumulative_stacked, 
                     asset order_gft_amount, asset price, 
@@ -32,7 +41,7 @@ CONTRACT gftorderbook : public contract
     
     ACTION clearstate ();
 
-    ACTION setstate (asset last_price, asset gft_for_sale, asset eos_to_spend);
+    ACTION setstate (asset last_price);
 
    ACTION removeorders () ;
 
@@ -96,11 +105,55 @@ CONTRACT gftorderbook : public contract
    TABLE State
    {
        asset        last_price;
-    //    asset        gft_for_sale;
-    //    asset        eos_to_spend;
+       asset        sell_orderbook_size_gft;
+       asset        buy_orderbook_size_gft;
+     //  asset        gft_for_sale;
    };
    typedef singleton<"states"_n, State> state_table;
    typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
+
+   TABLE Rewardconfig
+   {
+       uint64_t        inflation_share_scaled;
+       uint64_t        proximity_weight_scaled;
+       uint64_t        bucket_size_weight_scaled;
+       asset           reward_remainder;
+   };
+    typedef singleton<"rewconfigs"_n, Rewardconfig> rewardconfig_table;
+    typedef eosio::multi_index<"rewconfigs"_n, Rewardconfig> rewardconfig_table_placeholder;
+   
+   TABLE orderbucket
+   {    
+       uint64_t     bucket_id;
+       uint64_t     prox_bucket_min_scaled;
+       uint64_t     prox_bucket_max_scaled;
+       asset        bucket_minimum_sell;
+       asset        bucket_maximum_sell;
+       asset        bucket_maximum_buy;
+       asset        bucket_minimum_buy;
+       asset        bucket_size;
+       uint64_t     primary_key() const { return bucket_id; }
+   };
+
+   typedef eosio::multi_index<"orderbuckets"_n, orderbucket> orderbucket_table;
+
+   TABLE bucketuser
+   {
+    //    uint64_t     bucketuser_id;
+    //    uint64_t     bucket_id;
+       name         user;
+       asset        bucketuser_size;
+       uint64_t     primary_key() const { return user.value; }
+    //    uint64_t     by_bucket() const { return bucket_id; }
+    //    uint64_t     by_user() const { return user.value; }
+   };
+
+   typedef eosio::multi_index<"bucketusers"_n, bucketuser
+        // indexed_by<"bybucket"_n,
+        //     const_mem_fun<bucketuser, uint64_t, &bucketuser::by_bucket>>,
+        // indexed_by<"byuser"_n, 
+        //     const_mem_fun<bucketuser, uint64_t, &bucketuser::by_user>>
+   > bucketuser_table;
 
    TABLE buyorder
     {
@@ -281,7 +334,7 @@ CONTRACT gftorderbook : public contract
     void set_last_price (asset last_price)
     {
         state_table state (get_self(), get_self().value);
-        State s;
+        State s = state.get();
         s.last_price = last_price;
         state.set (s, get_self());        
     }
@@ -312,19 +365,45 @@ CONTRACT gftorderbook : public contract
         return asset { static_cast<int64_t> (original_asset.amount * adjustment), original_asset.symbol };
     }
 
+    void print_state () 
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        print (" \nCurrent State: \n");
+        print (" Sell orderbook size:   ", s.sell_orderbook_size_gft, "\n");
+        print (" Buy orderbook size:    ", s.buy_orderbook_size_gft, "\n");
+        print (" Last Price:            ", s.last_price, "\n");
+    }
+
+    void add_bucketuser (uint64_t bucket_id, name user, asset gft_amount)
+    {
+        bucketuser_table bu_t (get_self(), bucket_id);
+        auto bu_itr = bu_t.find (user.value);
+        if (bu_itr == bu_t.end()) {
+            bu_t.emplace (get_self(), [&](auto &bu) {
+                bu.user = user;
+                bu.bucketuser_size = gft_amount;
+            });
+        } else {
+            bu_t.modify (bu_itr, get_self(), [&](auto &bu) {
+                bu.bucketuser_size += gft_amount;
+            });
+        }
+    }
+
     void decrease_sellgft_liquidity (asset gft_sold)
     {
         state_table state (get_self(), get_self().value);
         State s = state.get();
-        // s.gft_for_sale -= gft_sold;
+        s.sell_orderbook_size_gft -= gft_sold;
         state.set (s, get_self());
     }
 
-    void decrease_buygft_liquidity (asset eos_spent)
+    void decrease_buygft_liquidity (asset gft_bought)
     {
         state_table state (get_self(), get_self().value);
         State s = state.get();
-        // s.eos_to_spend -= eos_spent;
+        s.buy_orderbook_size_gft -= gft_bought;
         state.set (s, get_self());
     }
 
@@ -332,15 +411,15 @@ CONTRACT gftorderbook : public contract
     {
         state_table state (get_self(), get_self().value);
         State s = state.get();
-        // s.gft_for_sale -= gft_sold;
+        s.sell_orderbook_size_gft += new_gft_added;
         state.set (s, get_self());
     }
 
-    void increase_buygft_liquidity (asset new_eos_to_spend)
+    void increase_buygft_liquidity (asset new_gft_added)
     {
         state_table state (get_self(), get_self().value);
         State s = state.get();
-        // s.eos_to_spend -= new_eos_to_spend;
+        s.buy_orderbook_size_gft += new_gft_added;
         state.set (s, get_self());
     }
 
@@ -356,6 +435,7 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.gyftiecontract, seller, buyer, xfer_to_buyer_gft, "Trade minus Taker Fees");
         sendfrombal (c.valid_counter_token_contract, buyer, seller, xfer_to_seller_eos, "Trade");
         sendfrombal (c.gyftiecontract, seller, seller, taker_fee_to_seller_gft, "Market Maker Reward");
+
         set_last_price (price);
         decrease_sellgft_liquidity (gft_amount);
 
@@ -379,7 +459,7 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.valid_counter_token_contract, buyer, seller, xfer_to_seller_eos, "Trade minus Taker Fees");
         sendfrombal (c.valid_counter_token_contract, buyer, buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
         set_last_price (price);
-        decrease_buygft_liquidity (eos_order_value);
+        decrease_buygft_liquidity (gft_amount);
 
         action(
             permission_level{get_self(), "owner"_n},
@@ -400,7 +480,7 @@ CONTRACT gftorderbook : public contract
                                    eos_to_spend.symbol };
 
         confirm_balance (buyer, eos_amount);
-
+     
         settle_seller_maker (buyer, s_itr->seller, s_itr->price_per_gft, 
                              get_gft_amount (s_itr->price_per_gft, eos_amount));
 
