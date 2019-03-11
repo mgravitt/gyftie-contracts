@@ -25,14 +25,25 @@ CONTRACT gftorderbook : public contract
 
     ACTION delconfig ();
 
-    ACTION setrewconfig (uint64_t inflation_share, uint64_t proximity_weight,
-                            uint64_t bucket_size_weight);
+    ACTION setrewconfig (uint64_t proximity_weight, uint64_t bucket_size_weight);
 
     ACTION addbucket (uint64_t prox_bucket_min, uint64_t prox_bucket_max);
 
     ACTION buildbucket (uint64_t bucket_id);
 
     ACTION buildbuckets ();
+
+    // ACTION wtf (name seller, 
+    //                             asset orig_gft_amount, 
+    //                             asset cumulative_stacked,
+    //                             asset order_gft_amount, asset price, 
+    //                             uint32_t next_price_adj, uint32_t next_share_adj);
+
+    ACTION payrewbucket (uint64_t bucket_id);
+    
+    ACTION payrewbucks ();
+
+    ACTION payliqinfrew (asset inflation_liquidity_reward);
 
     ACTION stacksellrec (name seller, asset orig_gft_amount, 
                     asset cumulative_stacked, 
@@ -107,6 +118,8 @@ CONTRACT gftorderbook : public contract
        asset        last_price;
        asset        sell_orderbook_size_gft;
        asset        buy_orderbook_size_gft;
+       uint32_t     last_bucket_build_time;
+       uint32_t     last_payrewbucks_time;
      //  asset        gft_for_sale;
    };
    typedef singleton<"states"_n, State> state_table;
@@ -114,7 +127,7 @@ CONTRACT gftorderbook : public contract
 
    TABLE Rewardconfig
    {
-       uint64_t        inflation_share_scaled;
+    //   uint64_t        inflation_share_scaled;
        uint64_t        proximity_weight_scaled;
        uint64_t        bucket_size_weight_scaled;
        asset           reward_remainder;
@@ -132,6 +145,7 @@ CONTRACT gftorderbook : public contract
        asset        bucket_maximum_buy;
        asset        bucket_minimum_buy;
        asset        bucket_size;
+       asset        reward_due;
        uint64_t     primary_key() const { return bucket_id; }
    };
 
@@ -139,21 +153,12 @@ CONTRACT gftorderbook : public contract
 
    TABLE bucketuser
    {
-    //    uint64_t     bucketuser_id;
-    //    uint64_t     bucket_id;
        name         user;
        asset        bucketuser_size;
        uint64_t     primary_key() const { return user.value; }
-    //    uint64_t     by_bucket() const { return bucket_id; }
-    //    uint64_t     by_user() const { return user.value; }
    };
 
-   typedef eosio::multi_index<"bucketusers"_n, bucketuser
-        // indexed_by<"bybucket"_n,
-        //     const_mem_fun<bucketuser, uint64_t, &bucketuser::by_bucket>>,
-        // indexed_by<"byuser"_n, 
-        //     const_mem_fun<bucketuser, uint64_t, &bucketuser::by_user>>
-   > bucketuser_table;
+   typedef eosio::multi_index<"bucketusers"_n, bucketuser> bucketuser_table;
 
    TABLE buyorder
     {
@@ -204,6 +209,25 @@ CONTRACT gftorderbook : public contract
 
     typedef eosio::multi_index<"balances"_n, balance> balance_table;
 
+    TABLE account
+    {
+        asset   balance;
+        string  idhash;
+        uint64_t primary_key() const { return balance.symbol.code().raw(); }
+    };
+    typedef eosio::multi_index<"accounts"_n, account> accounts;
+
+    TABLE profile
+    {
+        name        account;
+        uint32_t    rating_sum;
+        uint16_t    rating_count;
+        string      idhash;
+        string      id_expiration;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"profiles"_n, profile> profile_table;
+
     bool is_paused () 
     {
         config_table config (get_self(), get_self().value);
@@ -212,6 +236,29 @@ CONTRACT gftorderbook : public contract
             return true;
         }
         return false;
+    }
+
+    bool is_gyftie_account (name account) 
+    {
+        bool is_gyftie = false;
+
+        config_table config (get_self(), get_self().value);
+        auto c = config.get();
+
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        accounts a_t (c.gyftiecontract, account.value);
+        auto a_itr = a_t.find (sym.code().raw());
+        if (a_itr != a_t.end()) {
+            is_gyftie = true;
+        }
+
+        profile_table p_t (c.gyftiecontract, get_self().value);
+        auto p_itr = p_t.find (account.value);
+        if (p_itr != p_t.end()) {
+            is_gyftie = true;
+        }
+
+        return is_gyftie;
     }
 
     void sendfrombal ( const name token_contract,
@@ -262,6 +309,44 @@ CONTRACT gftorderbook : public contract
             .send();
 
         print("---------- End Payment -------\n");
+    }
+
+    void payrewbucks_deferred () 
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        if (s.last_payrewbucks_time < now()) {
+
+            uint64_t sender_id = now();
+            s.last_payrewbucks_time = sender_id;
+            state.set (s, get_self());
+
+            eosio::transaction out{};
+            out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                    get_self(), "payrewbucks"_n, 
+                                    std::make_tuple());
+            out.delay_sec = 1;
+            out.send(sender_id, get_self());            
+        }
+    }
+
+    void buildbuckets_deferred ()
+    {
+        state_table state (get_self(), get_self().value);
+        State s = state.get();
+        if (s.last_bucket_build_time < now()) {
+
+            uint64_t sender_id = now();
+            s.last_bucket_build_time = sender_id;
+            state.set (s, get_self());
+
+            eosio::transaction out{};
+            out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                    get_self(), "buildbuckets"_n, 
+                                    std::make_tuple());
+            out.delay_sec = 1;
+            out.send(sender_id, get_self());            
+        }
     }
 
     void processbook_deferred () 
@@ -375,6 +460,26 @@ CONTRACT gftorderbook : public contract
         print (" Last Price:            ", s.last_price, "\n");
     }
 
+    void add_bucket_reward (uint64_t bucket_id, asset reward_amount)
+    {
+        orderbucket_table ob_t (get_self(), get_self().value);
+        auto ob_itr = ob_t.find (bucket_id);
+        eosio_assert (ob_itr != ob_t.end(), "Bucket ID is not found.");
+
+        ob_t.modify (ob_itr, get_self(), [&](auto &ob) {
+            ob.reward_due += reward_amount;
+        });
+    }
+
+    void clr_bucketuser (uint64_t bucket_id)
+    {
+        bucketuser_table bu_t (get_self(), bucket_id);
+        auto bu_itr = bu_t.begin();
+        while (bu_itr != bu_t.end()) {
+            bu_itr = bu_t.erase (bu_itr);
+        }
+    }
+
     void add_bucketuser (uint64_t bucket_id, name user, asset gft_amount)
     {
         bucketuser_table bu_t (get_self(), bucket_id);
@@ -423,6 +528,22 @@ CONTRACT gftorderbook : public contract
         state.set (s, get_self());
     }
 
+    void add_limitsell_order (name seller, asset price_per_gft, asset gft_amount)
+    {
+        confirm_balance (seller, gft_amount);
+        increase_sellgft_liquidity (gft_amount);
+
+        sellorder_table s_t (get_self(), get_self().value);
+        s_t.emplace (get_self(), [&](auto &s) {
+            s.order_id = s_t.available_primary_key();
+            s.seller = seller;
+            s.price_per_gft = price_per_gft;
+            s.gft_amount = gft_amount;
+            s.order_value = get_eos_order_value (price_per_gft, gft_amount);
+            s.created_date = now();
+        });
+    }
+
     void settle_seller_maker (name buyer, name seller, asset price, asset gft_amount)
     {
         asset xfer_to_buyer_gft = adjust_asset (gft_amount, 1 - MAKER_REWARD);
@@ -437,7 +558,7 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.gyftiecontract, seller, seller, taker_fee_to_seller_gft, "Market Maker Reward");
 
         set_last_price (price);
-        decrease_sellgft_liquidity (gft_amount);
+        // decrease_sellgft_liquidity (gft_amount);
 
         action(
             permission_level{get_self(), "owner"_n},
@@ -459,7 +580,7 @@ CONTRACT gftorderbook : public contract
         sendfrombal (c.valid_counter_token_contract, buyer, seller, xfer_to_seller_eos, "Trade minus Taker Fees");
         sendfrombal (c.valid_counter_token_contract, buyer, buyer, taker_fee_to_buyer_eos, "Market Maker Reward");
         set_last_price (price);
-        decrease_buygft_liquidity (gft_amount);
+        // decrease_buygft_liquidity (gft_amount);
 
         action(
             permission_level{get_self(), "owner"_n},
@@ -485,13 +606,17 @@ CONTRACT gftorderbook : public contract
                              get_gft_amount (s_itr->price_per_gft, eos_amount));
 
         if (eos_amount == s_itr->order_value) {
+            decrease_sellgft_liquidity (s_itr->gft_amount);
             s_t.erase (s_itr);
         } else if (s_itr->order_value > eos_amount) {
+            decrease_sellgft_liquidity (get_gft_amount (s_itr->price_per_gft, eos_amount));
             s_t.modify (s_itr, get_self(), [&](auto &s) {
                 s.gft_amount -= get_gft_amount (s_itr->price_per_gft, eos_amount);
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
         }
+
+        buildbuckets_deferred();
     }
 
     void sellgft (uint64_t buyorder_id, name seller, asset gft_to_sell) 
@@ -510,13 +635,17 @@ CONTRACT gftorderbook : public contract
         settle_buyer_maker (b_itr->buyer, seller, b_itr->price_per_gft, gft_amount);
 
         if (gft_amount == b_itr->gft_amount) {
+            decrease_buygft_liquidity (b_itr->gft_amount);
             b_t.erase (b_itr);
         } else if (b_itr->gft_amount > gft_amount) {
+            decrease_buygft_liquidity (gft_amount);
             b_t.modify (b_itr, get_self(), [&](auto &b) {
                 b.gft_amount -= gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
         }
+
+        buildbuckets_deferred();
     }
 
     asset get_eos_order_value (asset price_per_gft, asset gft_amount) 
@@ -557,19 +686,25 @@ CONTRACT gftorderbook : public contract
         }
 
         if (b_itr->gft_amount == s_itr->gft_amount) {
+            decrease_buygft_liquidity (b_itr->gft_amount);
+            decrease_sellgft_liquidity (s_itr->gft_amount);
             s_t.erase (s_itr);
-            b_t.erase (b_itr);
+            b_t.erase (b_itr); 
         } else if (b_itr->gft_amount > s_itr->gft_amount) {
+            decrease_buygft_liquidity (s_itr->gft_amount);
             b_t.modify (b_itr, get_self(), [&](auto &b) {
                 b.gft_amount -= s_itr->gft_amount;
                 b.order_value = get_eos_order_value (b_itr->price_per_gft, b.gft_amount);
             });
+            decrease_sellgft_liquidity (s_itr->gft_amount);
             s_t.erase (s_itr);
         } else if (s_itr->gft_amount > b_itr->gft_amount) {
-             s_t.modify (s_itr, get_self(), [&](auto &s) {
+            decrease_sellgft_liquidity (b_itr->gft_amount);
+            s_t.modify (s_itr, get_self(), [&](auto &s) {
                 s.gft_amount -= b_itr->gft_amount;
                 s.order_value = get_eos_order_value (s_itr->price_per_gft, s.gft_amount);
             });
+            decrease_buygft_liquidity (b_itr->gft_amount);
             b_t.erase (b_itr);
         }
     }

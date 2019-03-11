@@ -85,7 +85,6 @@ ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
             p.rating_sum += rating;
         });
     }
-
     a_t.erase (a_itr);
 }
 
@@ -227,7 +226,12 @@ ACTION gyftietoken::gyft (name from,
 
     string to_gyfter_memo { "To Gyfter" };
     string to_gyftee_memo { "Gyft" };
+    string to_gyftiegyftie {"Inflation to Gyftie Foundation"};
     string auto_liquidity_memo { "Auto Liquidity Add to Order Book" };
+    float share_for_liquidity_reward = 0.100000000000;
+
+    asset gyft_inflation = issue_to_gyfter + issue_to_gyftee;
+    asset amount_to_gyftiegyftie = asset { static_cast<int64_t> (gyft_inflation.amount * (1 - share_for_liquidity_reward)), issue_to_gyfter.symbol };
 
     action (
         permission_level{get_self(), "owner"_n},
@@ -238,7 +242,19 @@ ACTION gyftietoken::gyft (name from,
     action (
         permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
-        std::make_tuple(c.gyftie_foundation, issue_to_gyfter + issue_to_gyftee, to_gyfter_memo))
+        std::make_tuple(c.gyftie_foundation, amount_to_gyftiegyftie, to_gyftiegyftie))
+    .send();
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        get_self(), "issue"_n,
+        std::make_tuple(c.gftorderbook, gyft_inflation - amount_to_gyftiegyftie, auto_liquidity_memo))
+    .send();
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        c.gftorderbook, "payliqinfrew"_n,
+        std::make_tuple(gyft_inflation - amount_to_gyftiegyftie))
     .send();
 
     action (
