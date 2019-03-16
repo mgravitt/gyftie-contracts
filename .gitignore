@@ -16,3 +16,4 @@ package-lock.json
 deployments.sh
 jungle_test.txt
 gyftie.sh
+*.json

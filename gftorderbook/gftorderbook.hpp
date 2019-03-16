@@ -33,12 +33,6 @@ CONTRACT gftorderbook : public contract
 
     ACTION buildbuckets ();
 
-    // ACTION wtf (name seller, 
-    //                             asset orig_gft_amount, 
-    //                             asset cumulative_stacked,
-    //                             asset order_gft_amount, asset price, 
-    //                             uint32_t next_price_adj, uint32_t next_share_adj);
-
     ACTION payrewbucket (uint64_t bucket_id);
     
     ACTION payrewbucks ();
@@ -93,6 +87,12 @@ CONTRACT gftorderbook : public contract
    ACTION pause ();
    ACTION unpause ();
 
+   ACTION compilestate ();
+
+   ACTION defbuckets ();
+
+   ACTION reassign (name current, name newacct, asset quantity);
+
   private:
 
     const uint64_t SCALER = 1000000;
@@ -120,7 +120,6 @@ CONTRACT gftorderbook : public contract
        asset        buy_orderbook_size_gft;
        uint32_t     last_bucket_build_time;
        uint32_t     last_payrewbucks_time;
-     //  asset        gft_for_sale;
    };
    typedef singleton<"states"_n, State> state_table;
    typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
@@ -134,6 +133,13 @@ CONTRACT gftorderbook : public contract
    };
     typedef singleton<"rewconfigs"_n, Rewardconfig> rewardconfig_table;
     typedef eosio::multi_index<"rewconfigs"_n, Rewardconfig> rewardconfig_table_placeholder;
+
+    TABLE SenderID
+    {
+        uint64_t    last_sender_id;
+    };
+    typedef singleton<"senderids"_n, SenderID> senderid_table;
+    typedef eosio::multi_index<"senderids"_n, SenderID> senderid_table_placeholder;
    
    TABLE orderbucket
    {    
@@ -228,6 +234,17 @@ CONTRACT gftorderbook : public contract
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
 
+    uint64_t get_next_sender_id()
+    {
+        senderid_table sid (get_self(), get_self().value);
+        SenderID s = sid.get();
+        uint64_t return_senderid = s.last_sender_id;
+        return_senderid++;
+        s.last_sender_id = return_senderid;
+        sid.set (s, get_self());
+        return return_senderid;
+    }
+
     bool is_paused () 
     {
         config_table config (get_self(), get_self().value);
@@ -317,8 +334,7 @@ CONTRACT gftorderbook : public contract
         State s = state.get();
         if (s.last_payrewbucks_time < now()) {
 
-            uint64_t sender_id = now();
-            s.last_payrewbucks_time = sender_id;
+            s.last_payrewbucks_time = now();
             state.set (s, get_self());
 
             eosio::transaction out{};
@@ -326,7 +342,7 @@ CONTRACT gftorderbook : public contract
                                     get_self(), "payrewbucks"_n, 
                                     std::make_tuple());
             out.delay_sec = 1;
-            out.send(sender_id, get_self());            
+            out.send(get_next_sender_id(), get_self());            
         }
     }
 
@@ -336,8 +352,7 @@ CONTRACT gftorderbook : public contract
         State s = state.get();
         if (s.last_bucket_build_time < now()) {
 
-            uint64_t sender_id = now();
-            s.last_bucket_build_time = sender_id;
+            s.last_bucket_build_time = now();
             state.set (s, get_self());
 
             eosio::transaction out{};
@@ -345,7 +360,7 @@ CONTRACT gftorderbook : public contract
                                     get_self(), "buildbuckets"_n, 
                                     std::make_tuple());
             out.delay_sec = 1;
-            out.send(sender_id, get_self());            
+            out.send(get_next_sender_id(), get_self());            
         }
     }
 
@@ -356,8 +371,7 @@ CONTRACT gftorderbook : public contract
                                 _self, "processbook"_n, 
                                 std::make_tuple());
         out.delay_sec = 2;
-        uint64_t sender_id = now();
-        out.send(sender_id, _self);
+        out.send(get_next_sender_id(), _self);
     }
 
     asset getopenbalance (name account, symbol sym)
@@ -407,13 +421,6 @@ CONTRACT gftorderbook : public contract
      void confirm_balance (name account, asset min_balance) 
     {
         eosio_assert (get_available_balance(account, min_balance.symbol) >= min_balance, "Insufficient funds.");
-
-        // balance_table b_t (get_self(), account.value);
-        // auto b_itr = b_t.find (min_balance.symbol.code().raw());
-        // eosio_assert (b_itr != b_t.end(), "User does not have a balance of required asset.");
-
-        // asset open_balance =  getopenbalance (account, min_balance.symbol);
-        // eosio_assert (b_itr->funds - open_balance >= min_balance, "Insufficient funds.");
     }
 
     void set_last_price (asset last_price)
@@ -621,7 +628,7 @@ CONTRACT gftorderbook : public contract
 
     void sellgft (uint64_t buyorder_id, name seller, asset gft_to_sell) 
     {
-        require_auth (seller);
+        // require_auth (seller);
 
         buyorder_table b_t (get_self(), get_self().value);
         auto b_itr = b_t.find (buyorder_id);
