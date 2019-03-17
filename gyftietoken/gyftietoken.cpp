@@ -1,6 +1,13 @@
 #include "gyftietoken.hpp"
 
 
+ACTION gyftietoken::setcount (uint32_t count)
+{
+    counter_table counter(get_self(), get_self().value);
+    Counter c ;
+    c.account_count = count;
+    counter.set (c, get_self());
+}
 // ACTION gyftietoken::copybal1 ()
 // {
 //     require_auth ("zombiejigsaw"_n);
@@ -280,19 +287,19 @@ ACTION gyftietoken::voteagainst (name voter,
 
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
-    eosio_assert (! is_paused(), "Contract is paused." );
+    // eosio_assert (! is_paused(), "Contract is paused." );
 
-    require_auth (from);
-    eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
+    // require_auth (from);
+    // eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
 
-    config_table config (get_self(), get_self().value);
-    auto c = config.get();
+    // config_table config (get_self(), get_self().value);
+    // auto c = config.get();
 
-    action(
-        permission_level{get_self(), "owner"_n},
-        c.token_gen, "generate"_n,
-        std::make_tuple(from, getgftbalance (from), to))
-    .send();
+    // action(
+    //     permission_level{get_self(), "owner"_n},
+    //     c.token_gen, "generate"_n,
+    //     std::make_tuple(from, getgftbalance (from), to))
+    // .send();
 }
 
 
@@ -306,9 +313,7 @@ ACTION gyftietoken::gyft (name from,
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
 
-    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-    asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, GYFTIE_PRECISION)), gft_symbol};
-    asset creation_fee = one_gyftie_token * 0;
+    asset creation_fee = get_one_gft() * 0;
     if ( !is_account (to)) {
         creation_fee = create_account_from_request (from, to);
     }
@@ -318,26 +323,18 @@ ACTION gyftietoken::gyft (name from,
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
+   
+    asset issue_to_gyfter = get_gyfter_reward(from);
+    asset issue_to_gyftee = get_recipient_reward(); 
 
-    tokengen_table t_t (c.token_gen, c.token_gen.value);
-    tokengen t = t_t.get();
-    eosio_assert (t.from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
-    eosio_assert (t.to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
+    string to_gyfter_memo { "Vouch-Gyft-Earn GFT-creation to Gyfter. See 'How Gyftie Works' document - ask us for link." };
+    string to_gyftee_memo { "Vouch-Gyft-Earn GFT-creation to new user. See 'How Gyftie Works' document - ask us for link." };
+    string to_gyftiegyftie {"Vouch-Gyft-Earn GFT-creation to Gyftie venture (gyftiegyftie). See 'How Gyftie Works' document - ask us for link."};
+    string auto_liquidity_memo { "Vouch-Gyft-Earn GFT-creation to liquidity providers. See 'How Gyftie Works' document - ask us for link." };
  
-    asset issue_to_gyfter = t.generated_amount;
-    asset issue_to_gyftee = one_gyftie_token; //getgftbalance (from);
-
-    string to_gyfter_memo { "To Gyfter" };
-    string to_gyftee_memo { "Gyft" };
-    string to_gyftiegyftie {"Inflation to Gyftie Foundation"};
-    string auto_liquidity_memo { "Auto Liquidity Add to Order Book" };
     float share_for_liquidity_reward = 0.100000000000;
-
     asset gyft_inflation = issue_to_gyfter + issue_to_gyftee;
     asset amount_to_gyftiegyftie = asset { static_cast<int64_t> (gyft_inflation.amount * (1 - share_for_liquidity_reward)), issue_to_gyfter.symbol };
-
-    // asset gft_market_sell = gyft_inflation * 0; //get_replenish_minimum_eos_req (to) ;
-    // issue_to_gyftee -= gft_market_sell;
     asset liquidity_reward = gyft_inflation - amount_to_gyftiegyftie;
 
     action (
@@ -364,26 +361,6 @@ ACTION gyftietoken::gyft (name from,
         std::make_tuple(liquidity_reward))
     .send();
 
-    // if (gft_market_sell.amount > 0) {
-    //     action (
-    //         permission_level{get_self(), "owner"_n},
-    //         get_self(), "issue"_n,
-    //         std::make_tuple(c.gftorderbook, gft_market_sell, market_sell_for_new_recipient))
-    //     .send();
-
-    //     action (
-    //         permission_level{get_self(), "owner"_n},
-    //         c.gftorderbook, "reassign"_n,
-    //         std::make_tuple(get_self(), to, gft_market_sell))
-    //     .send();
-        
-    //     action (
-    //         permission_level{get_self(), "owner"_n},
-    //         c.gftorderbook, "marketsell"_n,
-    //         std::make_tuple(to, gft_market_sell))
-    //     .send();    
-    // }
-    
     action (
         permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
@@ -602,7 +579,7 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 }
 
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(setcount)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
                             (removeprop)(setcounter)(ungyft))
                             // (copybal1)(remaccounts)(repopaccts)(remtemp)

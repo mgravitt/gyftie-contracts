@@ -157,7 +157,7 @@ ACTION gftorderbook::payrewbucket (uint64_t bucket_id)
 
         // print (" Reward : ", reward, "\n");
         remaining_reward -= reward;
-        sendfrombal (c.gyftiecontract, c.gyftiecontract, bu_itr->user, reward, "Liquidity Reward via New Gyft");
+        sendfrombal (c.gyftiecontract, c.gyftiecontract, bu_itr->user, reward, "Type 2 financial incentive paid to market makers. See 'How Gyftie Works' document - ask us for link.");
         bu_itr++;
     }
 
@@ -390,22 +390,96 @@ ACTION gftorderbook::buildbucket (uint64_t bucket_id)
 ACTION gftorderbook::limitbuygft (name buyer, asset price_per_gft, asset gft_amount)
 {
     require_auth (buyer);
+
+    eosio_assert ( is_gyftie_account (buyer), "Buyer is not a gyftie account." );
     eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
-    confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
 
-    increase_buygft_liquidity (gft_amount);
-
-    buyorder_table b_t (get_self(), get_self().value);
-    b_t.emplace (get_self(), [&](auto &b) {
-        b.order_id = b_t.available_primary_key();
-        b.buyer = buyer;
-        b.price_per_gft = price_per_gft;
-        b.gft_amount = gft_amount;
-        b.order_value = get_eos_order_value(price_per_gft, gft_amount);
-        b.created_date = now();
-    });
+    add_limitbuy_order (buyer, price_per_gft, gft_amount);
 
     processbook ();
+}
+
+
+ACTION gftorderbook::stackbuyrec (name buyer, 
+                                asset orig_eos_amount, 
+                                asset cumulative_stacked_eos,
+                                asset order_eos_amount, 
+                                asset price, 
+                                uint32_t next_price_adj, 
+                                uint32_t next_share_adj)
+{
+    print (" Recurring stack buy: ", order_eos_amount, "\n");
+    print (" Using Price: ", price, "\n");
+    
+    require_auth (get_self());
+
+    if (cumulative_stacked_eos >= orig_eos_amount) {
+        processbook_deferred();
+        return;
+    }
+
+    if (order_eos_amount > get_available_balance (buyer, order_eos_amount.symbol)) {
+        add_limitbuy_order (buyer, price, get_gft_amount(price, get_available_balance (buyer, order_eos_amount.symbol)));
+        processbook_deferred();
+        return;
+    }
+
+    print (" Adding Limit Order - price: ", price, "\n");
+    print (" GFT Amount: ", get_gft_amount(price, order_eos_amount), "\n");
+    add_limitbuy_order (buyer, price, get_gft_amount(price, order_eos_amount));
+
+    asset next_price = asset {  std::max (adjust_asset (price, 1 - ((float) next_price_adj / (float) 100)).amount, 
+                                          (int64_t) 1), price.symbol };
+
+    print (" Price adjustment: ", next_price_adj, "\n");
+    print (" New Price: ", next_price, "\n" );
+    asset next_order_eos = adjust_asset (orig_eos_amount, (float) next_share_adj / (float) 100);
+
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                            _self, "stackbuyrec"_n, 
+                            std::make_tuple(buyer,
+                                            orig_eos_amount,
+                                            cumulative_stacked_eos + order_eos_amount,
+                                            next_order_eos,
+                                            next_price,
+                                            next_price_adj + 1,
+                                            next_share_adj + 10));
+    out.delay_sec = 2;
+    out.send(get_next_sender_id(), get_self());
+}
+
+ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)
+{
+    eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
+    
+    require_auth (buyer);
+
+    eosio_assert ( is_gyftie_account (buyer), "Seller is not a gyftie account." );
+
+    confirm_balance (buyer, eos_amount);
+    
+    asset price = asset {  std::max (get_lowest_sell().amount - 1, (int64_t) 1), eos_amount.symbol };
+
+    float share = 0.01000000;
+
+    asset order_eos =  adjust_asset(eos_amount, share);
+
+    print (" \n\nStacking a buy: ", order_eos, "\n");
+
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                            get_self(), "stackbuyrec"_n, 
+                            std::make_tuple(buyer,
+                                            eos_amount,
+                                            eos_amount * 0,
+                                            order_eos,
+                                            price,
+                                            1,
+                                            1));
+
+    out.delay_sec = 2;
+    out.send(get_next_sender_id(), get_self());
 }
 
 ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_amount)
@@ -421,19 +495,7 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
 
     add_limitsell_order (seller, price_per_gft, gft_amount);
-    // confirm_balance (seller, gft_amount);
-    // increase_sellgft_liquidity (gft_amount);
-
-    // sellorder_table s_t (get_self(), get_self().value);
-    // s_t.emplace (get_self(), [&](auto &s) {
-    //     s.order_id = s_t.available_primary_key();
-    //     s.seller = seller;
-    //     s.price_per_gft = price_per_gft;
-    //     s.gft_amount = gft_amount;
-    //     s.order_value = get_eos_order_value (price_per_gft, gft_amount);
-    //     s.created_date = now();
-    // });
-
+  
     processbook ();
 }
 
@@ -443,10 +505,6 @@ ACTION gftorderbook::stacksellrec (name seller,
                                 asset order_gft_amount, asset price, 
                                 uint32_t next_price_adj, uint32_t next_share_adj)
 {
-    // print (" \nWTF\n\n") ;
-    // print (" stacksell rec: ", orig_gft_amount, "\n");
-    // print (" cumulative stacked: ", cumulative_stacked, "\n");
-
     require_auth (get_self());
 
     if (cumulative_stacked >= orig_gft_amount) {
@@ -455,13 +513,11 @@ ACTION gftorderbook::stacksellrec (name seller,
     }
 
     if (order_gft_amount > get_available_balance (seller, order_gft_amount.symbol)) {
-        // limitsellgft(seller, price, get_available_balance (seller, order_gft_amount.symbol));
         add_limitsell_order (seller, price, get_available_balance (seller, order_gft_amount.symbol));
         processbook_deferred();
         return;
     }
 
-    // limitsellgft (seller, price, order_gft_amount);
     add_limitsell_order (seller, price, order_gft_amount);
 
     asset next_price = adjust_asset (price, 1 + ( (float) next_price_adj / (float) 100));
@@ -489,7 +545,6 @@ ACTION gftorderbook::stacksell (name seller, asset gft_amount)
     // - sell 4% at 3% higher than above offer
     // - sell 5% at 4% higher than above offer
 
-    // print ("  STACK SELL\n\n");
     eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
 
     config_table config (get_self(), get_self().value);
@@ -507,11 +562,6 @@ ACTION gftorderbook::stacksell (name seller, asset gft_amount)
 
     asset order_gft = adjust_asset(gft_amount, share);
 
-    // print (" Seller: ", seller, "\n");
-    // print (" GFT Amount: ", gft_amount, "\n");
-    // print (" Order GFT: ", order_gft, "\n");
-    // print (" Price: ", price, "\n");
-
     eosio::transaction out{};
     out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
                             get_self(), "stacksellrec"_n, 
@@ -523,28 +573,13 @@ ACTION gftorderbook::stacksell (name seller, asset gft_amount)
                                             1,
                                             1));
 
-    // out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-    //                         get_self(), "wtf"_n, 
-    //                         std::make_tuple());
-
     out.delay_sec = 2;
     out.send(get_next_sender_id(), get_self());
 }
 
-ACTION gftorderbook::stackbuy (name buyer, asset eos_amount)
-{
-    require_auth (buyer);
-    eosio_assert ( is_gyftie_account (buyer), "Buyer is not a gyftie account." );
-    asset market_price = get_last_price ();
-
-    limitbuygft (buyer, adjust_asset (market_price, 0.95000000), get_gft_amount(adjust_asset (market_price, 0.95000000), adjust_asset(eos_amount, 0.25000000)));
-    limitbuygft (buyer, adjust_asset (market_price, 0.90000000), get_gft_amount(adjust_asset (market_price, 0.90000000), adjust_asset(eos_amount, 0.25000000)));
-    limitbuygft (buyer, adjust_asset (market_price, 0.80000000), get_gft_amount(adjust_asset (market_price, 0.80000000), adjust_asset(eos_amount, 0.50000000)));
-}
-
 ACTION gftorderbook::stack (name account, asset gft_amount, asset eos_amount)
 {
-    // stacksell (account, gft_amount);
+    stacksell (account, gft_amount);
     stackbuy (account, eos_amount);
 }
 
@@ -804,7 +839,7 @@ extern "C" {
         if (code == receiver) {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)(defbuckets)
-                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)(compilestate)
+                                                    (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)(stackbuyrec)(compilestate)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)
                                                     (setrewconfig)(addbucket)(buildbucket)(buildbuckets)(payliqinfrew)(payrewbucket)(payrewbucks))
             }    

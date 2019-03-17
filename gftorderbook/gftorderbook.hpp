@@ -43,6 +43,14 @@ CONTRACT gftorderbook : public contract
                     asset cumulative_stacked, 
                     asset order_gft_amount, asset price, 
                     uint32_t next_price_adj, uint32_t next_share_adj);
+
+    ACTION stackbuyrec (name buyer, 
+                        asset orig_eos_amount, 
+                        asset cumulative_stacked_eos,
+                        asset order_eos_amount, 
+                        asset price, 
+                        uint32_t next_price_adj, 
+                        uint32_t next_share_adj);
     
     ACTION clearstate ();
 
@@ -438,6 +446,20 @@ CONTRACT gftorderbook : public contract
         return s.last_price;
     }
 
+    asset get_lowest_sell () 
+    {
+        sellorder_table s_t (get_self(), get_self().value);
+        auto s_index = s_t.get_index<"byprice"_n>();
+        auto s_itr = s_index.begin();
+
+        if (s_itr == s_index.end()) {
+            config_table config (get_self(), get_self().value);
+            auto c = config.get();
+           return asset {0, c.valid_counter_token_symbol};
+        }
+        return s_itr->price_per_gft;
+    }
+
     asset get_highest_buy () 
     {
         buyorder_table b_t (get_self(), get_self().value);
@@ -535,8 +557,29 @@ CONTRACT gftorderbook : public contract
         state.set (s, get_self());
     }
 
+    void add_limitbuy_order (name buyer, asset price_per_gft, asset gft_amount)
+    {
+        // eosio_assert (price_per_gft.amount > 0, "Price must be greater than zero.");
+        // eosio_assert (gft_amount.amount > 0, "GFT amount must be greater than zero.");
+        confirm_balance (buyer, get_eos_order_value(price_per_gft, gft_amount));
+        increase_buygft_liquidity (gft_amount);
+
+        buyorder_table b_t (get_self(), get_self().value);
+        b_t.emplace (get_self(), [&](auto &b) {
+            b.order_id = b_t.available_primary_key();
+            b.buyer = buyer;
+            b.price_per_gft = price_per_gft;
+            b.gft_amount = gft_amount;
+            b.order_value = get_eos_order_value(price_per_gft, gft_amount);
+            b.created_date = now();
+        });
+    }
+
     void add_limitsell_order (name seller, asset price_per_gft, asset gft_amount)
     {
+        eosio_assert (price_per_gft.amount > 0, "Price must be greater than zero.");
+        eosio_assert (gft_amount.amount > 0, "GFT amount must be greater than zero.");
+
         confirm_balance (seller, gft_amount);
         increase_sellgft_liquidity (gft_amount);
 
@@ -663,8 +706,13 @@ CONTRACT gftorderbook : public contract
 
     asset get_gft_amount (asset price_per_gft, asset eos_amount)
     {
+        // print (" Price per GFT: ", price_per_gft, "\n");
+        // print (" EOS Amount: ", eos_amount, "\n");
+
         symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
         float gft_quantity = pow(10,GYFTIE_PRECISION) * eos_amount.amount / price_per_gft.amount;
+        // print (" GFT Quantity: ", gft_quantity, "\n");
+        // print (" GFT Amount: ", asset { static_cast<int64_t>(gft_quantity), gft_symbol }, "\n");
         return asset { static_cast<int64_t>(gft_quantity), gft_symbol };
         //return gft_amount;
     }

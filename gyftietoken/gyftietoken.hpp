@@ -20,6 +20,7 @@ CONTRACT gyftietoken : public contract
     // ACTION remaccounts();
     // ACTION repopaccts();
     // ACTION remtemp();
+    ACTION setcount (uint32_t count);
 
     ACTION setconfig(name token_gen, name gftorderbook, name gyftie_foundation);
 
@@ -459,21 +460,21 @@ CONTRACT gyftietoken : public contract
 
         // Create account
         action(
-            permission_level{get_self(), name("active")},
+            permission_level{get_self(), name("owner")},
             name("eosio"), name("newaccount"),
             std::make_tuple(get_self(), recipient, owner_auth, active_auth))
             .send();
 
         // Buy ram
         action(
-            permission_level{get_self(), name("active")},
+            permission_level{get_self(), name("owner")},
             name("eosio"), name("buyram"),
             std::make_tuple(get_self(), recipient, ram))
             .send();
 
         // Delegate CPU/NET
         action(
-            permission_level{get_self(), name("active")},
+            permission_level{get_self(), name("owner")},
             name("eosio"), name("delegatebw"),
             std::make_tuple(get_self(), recipient, net, cpu, 1))
             .send();
@@ -546,5 +547,67 @@ CONTRACT gyftietoken : public contract
         }
 
         return get_market_gft_requirement(eos_needed);
+    }
+
+    float get_usercount_factor ()
+    {
+        uint16_t usercount_baseline = 195;
+        counter_table counter(get_self(), get_self().value);
+        auto c = counter.get();
+        float percent_increase_user_count = (float) (c.account_count - usercount_baseline) / (float) usercount_baseline;
+
+        float double_decrease = -1 * 2 * percent_increase_user_count;
+        return double_decrease;
+    }
+
+    asset get_one_gft()
+    {
+        symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        return asset { static_cast<int64_t>(pow(10, GYFTIE_PRECISION)), gft_symbol};
+    }
+
+    asset get_recipient_reward ()
+    {
+        //print (" \nDecrease recipient reward by : ", get_usercount_factor(), "\n");
+        return get_one_gft();
+    }
+
+    asset get_gyfter_reward (name gyfter)
+    {
+        //print (" \nDecrease gyfter reward by : ", get_usercount_factor(), "\n");
+
+        asset one_gyftie_token = get_one_gft();
+        asset gyfter_gft_balance = getgftbalance (gyfter);
+
+        //double gyft_benefit= 0.0;
+        asset gyft_benefit_amount = one_gyftie_token;
+
+        if (gyfter_gft_balance  <= (one_gyftie_token * 3)) {
+            gyft_benefit_amount = one_gyftie_token * 3;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 10)) {
+            gyft_benefit_amount = one_gyftie_token * 4;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 20)) {
+            gyft_benefit_amount = one_gyftie_token * 5;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 50)) {
+            gyft_benefit_amount = one_gyftie_token * 6;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 100)) {
+            gyft_benefit_amount = one_gyftie_token * 7;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 200)) {
+            gyft_benefit_amount = one_gyftie_token * 8;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 500)) {
+            gyft_benefit_amount = one_gyftie_token * 9;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 1000)) {
+            gyft_benefit_amount = one_gyftie_token * 10;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 2000)) {
+            gyft_benefit_amount = one_gyftie_token * 11;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 5000)) {
+            gyft_benefit_amount = one_gyftie_token * 12;
+        } else if (gyfter_gft_balance  <= (one_gyftie_token * 10000)) {
+            gyft_benefit_amount = one_gyftie_token * 15;
+        } else {
+            gyft_benefit_amount = one_gyftie_token * 20;
+        }
+
+        return gyft_benefit_amount;
     }
 };
