@@ -1,5 +1,29 @@
 #include "gftmultisig.hpp"
 
+ACTION gftmultisig::addrequest (const name gyfter,
+                                const name recipient,
+                                const string owner_public_key,
+                                const string active_public_key)
+{
+    gyftrequest_table g_t (get_self(), get_self().value);
+    g_t.emplace (get_self(), [&](auto &g) {
+        g.recipient = recipient;
+        g.gyfter = gyfter;
+        g.owner_public_key = owner_public_key;
+        g.active_public_key = active_public_key;
+        g.requested_date = now();
+    });
+}
+
+ACTION gftmultisig::delrequest (const name recipient)
+{
+    gyftrequest_table g_t (get_self(), get_self().value);
+    auto g_itr = g_t.find (recipient.value);
+    eosio_assert (g_itr != g_t.end(), "Gyft request not found.");
+
+    g_t.erase (g_itr);
+}
+
 ACTION gftmultisig::addproposal (const name proposer,
                                 const name required_approver,
                                 const string proposal_name,
@@ -47,4 +71,5 @@ ACTION gftmultisig::approve(const uint64_t proposal_id)
     });
 }
 
-EOSIO_DISPATCH(gftmultisig, (addproposal)(approve)(delproposal))
+EOSIO_DISPATCH(gftmultisig, (addproposal)(approve)(delproposal)
+                            (addrequest)(delrequest))

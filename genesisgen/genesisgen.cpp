@@ -12,7 +12,6 @@ ACTION genesisgen::generate (   name from,
     double gyft_benefit= 0.0;
     asset gyft_benefit_amount = one_gyftie_token;
 
-
     if (gyfter_gft_balance  <= (one_gyftie_token * 3)) {
         gyft_benefit_amount = one_gyftie_token * 3;
         // gyft_benefit = 0.30;

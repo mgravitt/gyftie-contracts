@@ -1,5 +1,108 @@
 #include "gyftietoken.hpp"
 
+
+ACTION gyftietoken::setcount (uint32_t count)
+{
+    counter_table counter(get_self(), get_self().value);
+    Counter c ;
+    c.account_count = count;
+    counter.set (c, get_self());
+}
+// ACTION gyftietoken::copybal1 ()
+// {
+//     require_auth ("zombiejigsaw"_n);
+
+//     config_table config (get_self(), get_self().value);
+//     Config c = config.get();
+
+//     profile_table p_t (get_self(), get_self().value);
+//     tempacct_table t_t (get_self(), get_self().value);
+//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+//     accounts a_t (get_self(), c.gftorderbook.value);
+//     auto a_itr = a_t.find (gft_symbol.code().raw());
+
+//     t_t.emplace (get_self(), [&](auto &t) {
+//         t.account = c.gftorderbook;
+//         t.balance = a_itr->balance;
+//     });
+
+//     a_t = accounts (get_self(), c.gyftie_foundation.value);
+//     a_itr = a_t.find (gft_symbol.code().raw());
+
+//     t_t.emplace (get_self(), [&](auto &t) {
+//         t.account = c.gyftie_foundation;
+//         t.balance = a_itr->balance;
+//     });
+
+//     auto p_itr = p_t.begin();
+//     while (p_itr != p_t.end()) {
+//         a_t = accounts (get_self(), p_itr->account.value);
+//         a_itr = a_t.find (gft_symbol.code().raw());
+
+//         t_t.emplace (get_self(), [&](auto& t) {
+//             t.account = p_itr->account;
+//             t.balance = a_itr->balance;
+//         });
+//         p_itr++;
+//     }
+// }
+
+// ACTION gyftietoken::remaccounts ()
+// {
+//     require_auth ("zombiejigsaw"_n);
+
+//     config_table config (get_self(), get_self().value);
+//     Config c = config.get();    
+    
+//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+//     accounts a_t (get_self(), c.gftorderbook.value);
+//     auto a_itr = a_t.find (gft_symbol.code().raw());
+//     a_t.erase (a_itr);
+
+//     a_t = accounts (get_self(), c.gyftie_foundation.value);
+//     a_itr = a_t.find (gft_symbol.code().raw());
+//     a_t.erase (a_itr);
+
+//     profile_table p_t (get_self(), get_self().value);
+
+//     auto p_itr = p_t.begin();
+//     while (p_itr != p_t.end()) {
+//         accounts a_t (get_self(), p_itr->account.value);
+//         auto a_itr = a_t.find (gft_symbol.code().raw());
+//         a_t.erase (a_itr);
+//         p_itr++;
+//     }
+// }
+
+// ACTION gyftietoken::repopaccts ()
+// {
+//     require_auth ("zombiejigsaw"_n);
+  
+//     tempacct_table t_t (get_self(), get_self().value);
+//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+//     auto t_itr = t_t.begin();
+//     while (t_itr != t_t.end()) {
+//         accounts a_t (get_self(), t_itr->account.value);
+//         a_t.emplace (get_self(), [&](auto &a) {
+//             a.balance = t_itr->balance;
+//         });
+//         t_itr++;
+//     }
+// }
+
+// ACTION gyftietoken::remtemp () 
+// {
+//     require_auth ("zombiejigsaw"_n);
+//     tempacct_table t_t (get_self(), get_self().value);
+//     auto t_itr = t_t.begin();
+//     while (t_itr != t_t.end()) {
+//         t_itr = t_t.erase (t_itr);
+//     }
+// }
+
 ACTION gyftietoken::setconfig (name token_gen,
                                 name gftorderbook,
                                 name gyftie_foundation)
@@ -50,17 +153,17 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
-ACTION gyftietoken::sudoprofile (name account) 
-{
-    require_auth (get_self());
-    eosio_assert (is_tokenholder(account), "Account is not a token holder.");
+// ACTION gyftietoken::sudoprofile (name account) 
+// {
+//     require_auth (get_self());
+//     eosio_assert (is_tokenholder(account), "Account is not a token holder.");
 
-    symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-    accounts a_t (get_self(), account.value);
-    auto a_itr = a_t.find(sym.code().raw());
+//     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+//     accounts a_t (get_self(), account.value);
+//     auto a_itr = a_t.find(sym.code().raw());
 
-    insert_profile (account, a_itr->idhash);
-}
+//     insert_profile (account, a_itr->idhash);
+// }
 
 ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 {
@@ -85,7 +188,6 @@ ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
             p.rating_sum += rating;
         });
     }
-
     a_t.erase (a_itr);
 }
 
@@ -185,20 +287,21 @@ ACTION gyftietoken::voteagainst (name voter,
 
 ACTION gyftietoken::calcgyft (name from, name to) 
 {
-    eosio_assert (! is_paused(), "Contract is paused." );
+    // eosio_assert (! is_paused(), "Contract is paused." );
 
-    require_auth (from);
-    eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
+    // require_auth (from);
+    // eosio_assert (is_tokenholder (from), "Gyfter is not a GFT token holder.");
 
-    config_table config (get_self(), get_self().value);
-    auto c = config.get();
+    // config_table config (get_self(), get_self().value);
+    // auto c = config.get();
 
-    action(
-        permission_level{get_self(), "owner"_n},
-        c.token_gen, "generate"_n,
-        std::make_tuple(from, getgftbalance (from), to))
-    .send();
+    // action(
+    //     permission_level{get_self(), "owner"_n},
+    //     c.token_gen, "generate"_n,
+    //     std::make_tuple(from, getgftbalance (from), to))
+    // .send();
 }
+
 
 ACTION gyftietoken::gyft (name from, 
                             name to, 
@@ -209,36 +312,53 @@ ACTION gyftietoken::gyft (name from,
 
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
-    eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
 
+    asset creation_fee = get_one_gft() * 0;
+    if ( !is_account (to)) {
+        creation_fee = create_account_from_request (from, to);
+    }
+
+    eosio_assert (!is_gyftie_account(to), "Receipient must not be a Gyftie account.");
     insert_profile (to, idhash);
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
+   
+    asset issue_to_gyfter = get_gyfter_reward(from);
+    asset issue_to_gyftee = get_recipient_reward(); 
 
-    tokengen_table t_t (c.token_gen, c.token_gen.value);
-    tokengen t = t_t.get();
-    eosio_assert (t.from == from, "Token generation calculation -from- address does not match gyft. Recalculate.");
-    eosio_assert (t.to == to, "Token generation calculation -to- address does not match gyft. Recalculate.");
+    string to_gyfter_memo { "Vouch-Gyft-Earn GFT-creation to Gyfter. See 'How Gyftie Works' document - ask us for link." };
+    string to_gyftee_memo { "Vouch-Gyft-Earn GFT-creation to new user. See 'How Gyftie Works' document - ask us for link." };
+    string to_gyftiegyftie {"Vouch-Gyft-Earn GFT-creation to Gyftie venture (gyftiegyftie). See 'How Gyftie Works' document - ask us for link."};
+    string auto_liquidity_memo { "Vouch-Gyft-Earn GFT-creation to liquidity providers. See 'How Gyftie Works' document - ask us for link." };
  
-    asset issue_to_gyfter = t.generated_amount;
-    asset one_gyftie_token = asset { static_cast<int64_t>(pow(10, t.generated_amount.symbol.precision())), t.generated_amount.symbol};
-    asset issue_to_gyftee = one_gyftie_token; //getgftbalance (from);
-
-    string to_gyfter_memo { "To Gyfter" };
-    string to_gyftee_memo { "Gyft" };
-    string auto_liquidity_memo { "Auto Liquidity Add to Order Book" };
+    float share_for_liquidity_reward = 0.100000000000;
+    asset gyft_inflation = issue_to_gyfter + issue_to_gyftee;
+    asset amount_to_gyftiegyftie = asset { static_cast<int64_t> (gyft_inflation.amount * (1 - share_for_liquidity_reward)), issue_to_gyfter.symbol };
+    asset liquidity_reward = gyft_inflation - amount_to_gyftiegyftie;
 
     action (
         permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
-        std::make_tuple(from, issue_to_gyfter, to_gyfter_memo))
+        std::make_tuple(from, issue_to_gyfter - creation_fee, to_gyfter_memo))
     .send();
 
     action (
         permission_level{get_self(), "owner"_n},
         get_self(), "issue"_n,
-        std::make_tuple(c.gyftie_foundation, issue_to_gyfter + issue_to_gyftee, to_gyfter_memo))
+        std::make_tuple(c.gyftie_foundation, amount_to_gyftiegyftie, to_gyftiegyftie))
+    .send();
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        get_self(), "issue"_n,
+        std::make_tuple(c.gftorderbook, liquidity_reward, auto_liquidity_memo))
+    .send();
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        c.gftorderbook, "payliqinfrew"_n,
+        std::make_tuple(liquidity_reward))
     .send();
 
     action (
@@ -262,6 +382,56 @@ ACTION gyftietoken::gyft (name from,
     // .send();
 
     addgyft (from, to, issue_to_gyfter, issue_to_gyftee, relationship);
+}
+
+ACTION gyftietoken::ungyft(name account)
+{
+    require_auth (get_self());
+
+    gyft_table g_t (get_self(), get_self().value);
+    // auto gyftee_index = g_t.get_index<"bygyftee"_n>();
+    // auto gyftee_itr = gyftee_index.find (account.value);
+    // eosio_assert (gyftee_itr != gyftee_index.end(), "Gyft event not found for account.");
+
+    // auto gyfter_index = g_t.get_index<"bygyfter"_n>();
+    // auto gyfter_itr = gyfter_index.find (account.value);
+    // eosio_assert (gyfter_itr == gyfter_index.end(), "Account issued a gyft; must ungyft downstream accounts first.");
+
+    auto g_itr = g_t.begin();
+    while (g_itr != g_t.end()) {
+        eosio_assert (g_itr->gyfter != account, "Account issued a gyft; must ungyft downstream accounts first.");
+        g_itr++;
+    }
+
+    bool found = false;
+    g_itr = g_t.begin();
+    while (g_itr != g_t.end() and !found) {
+        if (g_itr->gyftee == account) {
+            found = true;
+        } else {
+            g_itr++;
+        }
+    }
+
+    // burn tokens for gyfter, gyftee, and gyftiegyftie
+    burn (account, g_itr->gyftee_issue);
+    burn (g_itr->gyfter, g_itr->gyfter_issue);
+
+    config_table config (get_self(), get_self().value);
+    auto c = config.get();
+    burn (c.gyftie_foundation, g_itr->gyftee_issue + g_itr->gyfter_issue);
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio_assert (p_itr != p_t.end(), "Account profile is not found.");
+    p_t.erase (p_itr);
+
+    accounts a_t(get_self(), account.value);
+    auto a_itr = a_t.find(g_itr->gyftee_issue.symbol.code().raw());
+    eosio_assert (a_itr != a_t.end(), "Gyftee not found in accounts table under GFT symbol.");
+    a_t.erase (a_itr);
+
+    g_t.erase (g_itr);
 }
 
 ACTION gyftietoken::create()
@@ -314,7 +484,6 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
         SEND_INLINE_ACTION(*this, transfer, {st.issuer, "owner"_n}, {st.issuer, to, quantity, memo});
     }
 }
-
 
 ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
 {
@@ -410,6 +579,7 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 }
 
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(setcount)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
-                            (removeprop)(setcounter))
+                            (removeprop)(setcounter)(ungyft))
+                            // (copybal1)(remaccounts)(repopaccts)(remtemp)

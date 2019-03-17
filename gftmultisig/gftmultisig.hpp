@@ -22,20 +22,34 @@ CONTRACT gftmultisig : public contract
     ACTION approve (const uint64_t proposal_id);
 
     ACTION delproposal (const uint64_t proposal_id);
+
+    ACTION addrequest (const name gyfter,
+                        const name recipient,
+                        const string owner_public_key,
+                        const string active_public_key) ;
+
+    ACTION delrequest (const name recipient);
     
   private:
 
     const string STATUS_OPEN = "OPEN";
     const string STATUS_APPROVED = "APPROVED";
 
-    // TABLE Config
-    // {
-    //     asset       gft_eos_rate;
-    //     float       gyfter_payback_rate;      
-    // };
+    TABLE gyftrequest
+    {
+      name        recipient;
+      name        gyfter;
+      string      owner_public_key;
+      string      active_public_key;
+      uint32_t    requested_date;
+      uint64_t    primary_key() const { return  recipient.value; }
+      uint64_t    by_gyfter () const { return gyfter.value; }
+    };
 
-    // typedef singleton<"configs"_n, Config> config_table;
-    // typedef eosio::multi_index<"configs"_n, Config> config_table_placeholder;
+    typedef eosio::multi_index<"gyftrequests"_n, gyftrequest,
+      indexed_by<"bygyfter"_n,
+        const_mem_fun<gyftrequest, uint64_t, &gyftrequest::by_gyfter>>
+    > gyftrequest_table;
     
     TABLE proposal
     {

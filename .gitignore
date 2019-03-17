@@ -14,5 +14,6 @@ gyftie-mainnet
 trx.json
 package-lock.json
 deployments.sh
-jungle_test.sh
+jungle_test.txt
 gyftie.sh
+*.json
