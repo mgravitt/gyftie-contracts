@@ -20,13 +20,16 @@ CONTRACT gyftietoken : public contract
     // ACTION remaccounts();
     // ACTION repopaccts();
     // ACTION remtemp();
+
+    ACTION miggyftss1();
+
+    ACTION miggyftss2(); 
+
     ACTION setcount (uint32_t count);
 
     ACTION setconfig(name token_gen, name gftorderbook, name gyftie_foundation);
 
     ACTION delconfig();
-
-    // ACTION sudoprofile (name account);
 
     ACTION addrating(name rater, name ratee, uint8_t rating);
 
@@ -38,7 +41,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION calcgyft(name from, name to);
 
-    ACTION gyft(name from, name to, string idhash, string relationship);
+    ACTION gyft(name from, name to, string idhash, string relationship); //, string id_expiration);
 
     ACTION ungyft(name account);
 
@@ -52,6 +55,16 @@ CONTRACT gyftietoken : public contract
 
     ACTION setcounter(uint64_t account_count);
 
+    // ACTION setvalidator (name account, uint8_t active_validator);
+
+    ACTION nchallenge (name challenger_account, name challenged_account, string notes);
+
+    ACTION validate (name validator, name account, string idhash, string id_expiration);
+
+    ACTION addcidnote (name scribe, uint64_t challenge_id, string note);
+
+    ACTION addcnote (name scribe, name challenged_account, string note);
+
     ACTION pause();
 
     ACTION unpause();
@@ -60,10 +73,13 @@ CONTRACT gyftietoken : public contract
     const string GYFTIE_SYM_STR = "GFT";
     const uint8_t GYFTIE_PRECISION = 8;
     const string symbol_name = "EOS";
-    symbol network_symbol = symbol(symbol_name, 4);
+    const symbol network_symbol = symbol(symbol_name, 4);
 
     const uint8_t PAUSED = 1;
     const uint8_t UNPAUSED = 0;
+
+    const uint8_t NEW_CHALLENGE=1;
+    const uint8_t VALIDATED=2;
 
     TABLE Config
     {
@@ -130,46 +146,108 @@ CONTRACT gyftietoken : public contract
 
     TABLE profile
     {
-        name account;
-        uint32_t rating_sum;
-        uint16_t rating_count;
-        string idhash;
-        string id_expiration;
-        uint64_t primary_key() const { return account.value; }
+        name        account;
+        uint32_t    rating_sum;
+        uint16_t    rating_count;
+        string      idhash;
+        string      id_expiration;
+        // uint8_t     active_validator;
+        // asset       gft_balance;
+        uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
 
+    // TABLE tprofile
+    // {
+    //     name account;
+    //     uint32_t rating_sum;
+    //     uint16_t rating_count;
+    //     string idhash;
+    //     string id_expiration;
+
+    //     uint64_t primary_key() const { return account.value; }
+    // };
+    // typedef eosio::multi_index<"tprofiles"_n, tprofile> ptrofile_table;
+
+    TABLE challenge 
+    {
+        uint64_t        challenge_id;
+        name            challenged_account;
+        name            challenger_account;
+        name            validator_account;
+        vector<string>  challenge_notes;
+        uint32_t        challenged_time;
+        uint32_t        validated_time;
+        uint8_t         status;        
+        uint64_t        primary_key() const { return challenge_id; }
+        uint64_t        by_challenged () const { return challenged_account.value; }
+        uint64_t        by_challenger() const { return challenger_account.value; }
+        uint64_t        by_validator() const { return validator_account.value; }
+    };
+    typedef eosio::multi_index<"challenges"_n, challenge,
+        indexed_by<"bychallenged"_n,
+            const_mem_fun<challenge, uint64_t, &challenge::by_challenged>>,
+        indexed_by<"bychallenger"_n,
+            const_mem_fun<challenge, uint64_t, &challenge::by_challenger>>,
+        indexed_by<"byvalidator"_n, 
+            const_mem_fun<challenge, uint64_t, &challenge::by_validator>>
+    > challenge_table;
+
     TABLE availrating
     {
-        name ratee;
-        uint32_t rate_deadline;
-        uint64_t primary_key() const { return ratee.value; }
+        name        ratee;
+        uint32_t    rate_deadline;
+        uint64_t    primary_key() const { return ratee.value; }
     };
     typedef eosio::multi_index<"availratings"_n, availrating> availrating_table;
 
     TABLE gyftevent
     {
-        uint64_t gyft_id;
-        name gyfter;
-        name gyftee;
-        asset gyfter_issue;
-        asset gyftee_issue;
-        string relationship;
-        string notes;
-        uint32_t gyft_date;
-        uint16_t likes;
-        uint64_t primary_key() const { return gyft_id; }
-        // uint64_t    by_gyfter() const { return gyfter.value; }
-        // uint64_t    by_gyftee() const { return gyftee.value; }
+        uint64_t    gyft_id;
+        name        gyfter;
+        name        gyftee;
+        asset       gyfter_issue;
+        asset       gyftee_issue;
+        string      relationship;
+        string      notes;
+        uint32_t    gyft_date;
+        uint16_t    likes;
+        uint64_t    primary_key() const { return gyft_id; }
+        uint64_t    by_gyfter() const { return gyfter.value; }
+        uint64_t    by_gyftee() const { return gyftee.value; }
     };
 
-    typedef eosio::multi_index<"gyfts"_n, gyftevent
-                               // indexed_by<"bygyfter"_n,
-                               //     const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyfter>>,
-                               // indexed_by<"bygyftee"_n,
-                               //     const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyftee>>
+    typedef eosio::multi_index<"gyfts"_n, gyftevent,
+                               indexed_by<"bygyfter"_n,
+                                   const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyfter>>,
+                               indexed_by<"bygyftee"_n,
+                                   const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyftee>>
                                >
         gyft_table;
+
+    TABLE tgyftevent
+    {
+        uint64_t    gyft_id;
+        name        gyfter;
+        name        gyftee;
+        asset       gyfter_issue;
+        asset       gyftee_issue;
+        string      relationship;
+        string      notes;
+        uint32_t    gyft_date;
+        uint16_t    likes;
+        uint64_t    primary_key() const { return gyft_id; }
+        uint64_t    by_gyfter() const { return gyfter.value; }
+        uint64_t    by_gyftee() const { return gyftee.value; }
+    };
+
+    typedef eosio::multi_index<"tgyfts"_n, tgyftevent,
+                               indexed_by<"bygyfter"_n,
+                                   const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyfter>>,
+                               indexed_by<"bygyftee"_n,
+                                   const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyftee>>
+                               >
+        tgyft_table;
 
     TABLE currency_stats
     {
@@ -257,7 +335,6 @@ CONTRACT gyftietoken : public contract
 
     authority keystring_authority(string key_str)
     {
-
         // Convert string to key type
         const abieos::public_key key = abieos::string_to_public_key(key_str);
 
@@ -324,6 +401,42 @@ CONTRACT gyftietoken : public contract
     asset adjust_asset(asset original_asset, float adjustment)
     {
         return asset{static_cast<int64_t>(original_asset.amount * adjustment), original_asset.symbol};
+    }
+
+    void permit_account (name account)
+    {
+        eosio_assert ( is_gyftie_account (account), "Account is not a GFT token holder.");
+
+        challenge_table c_t (get_self(), get_self().value);
+        auto challenged_index = c_t.get_index<"bychallenged"_n>();
+        auto c_itr = challenged_index.find(account.value);
+
+        while (c_itr != challenged_index.end()) {
+            if (c_itr->status != VALIDATED) {
+                eosio_assert (c_itr->challenged_time <= now() + 60 * 60 * 24 * 7, "Account is locked until it is re-validated.");
+            }
+            c_itr++;
+        }       
+    }
+
+    void permit_validator (name validator, name challenged_account) 
+    {
+        gyft_table g_t (get_self(), get_self().value);
+        auto gyfter_index = g_t.get_index<"bygyfter"_n>();
+        auto gyfter_itr = gyfter_index.find(validator.value);
+
+        while (gyfter_itr != gyfter_index.end()) {
+            eosio_assert (gyfter_itr->gyftee != challenged_account, "Validator cannot validate an account they gyfted.");
+            gyfter_itr++;
+        }
+
+        auto gyftee_index = g_t.get_index<"bygyftee"_n>();
+        auto gyftee_itr = gyftee_index.find(validator.value);
+
+        while (gyftee_itr != gyftee_index.end()) {
+            eosio_assert (gyftee_itr->gyfter != challenged_account, "Validator cannot validate they gyfter.");
+            gyftee_itr++;
+        }
     }
 
     bool is_tokenholder(name account)

@@ -8,6 +8,66 @@ ACTION gyftietoken::setcount (uint32_t count)
     c.account_count = count;
     counter.set (c, get_self());
 }
+
+ACTION gyftietoken::miggyftss1 ()
+{
+    require_auth (get_self());
+    gyft_table g_t (get_self(), get_self().value);
+    auto g_itr = g_t.begin();
+
+    tgyft_table tg_t (get_self(), get_self().value);
+    
+    while (g_itr != g_t.end()) {
+        tg_t.emplace (get_self(), [&] (auto& tg) {
+            tg.gyft_id = g_itr->gyft_id;
+            tg.gyfter = g_itr->gyfter;
+            tg.gyftee = g_itr->gyftee;
+            tg.gyfter_issue = g_itr->gyfter_issue;
+            tg.gyftee_issue = g_itr->gyftee_issue;
+            tg.relationship = g_itr->relationship;
+            tg.notes = g_itr->notes;
+            tg.gyft_date = g_itr->gyft_date;
+            tg.likes = g_itr->likes;            
+        });
+       g_itr++;
+    }
+
+    g_itr = g_t.begin();
+    while (g_itr != g_t.end()) {
+        g_itr = g_t.erase(g_itr);
+    }
+}
+
+
+ACTION gyftietoken::miggyftss2 ()
+{
+    require_auth (get_self());
+    tgyft_table tg_t (get_self(), get_self().value);
+    auto tg_itr = tg_t.begin();
+
+    gyft_table g_t (get_self(), get_self().value);
+    
+    while (tg_itr != tg_t.end()) {
+        g_t.emplace (get_self(), [&] (auto& g) {
+            g.gyft_id = tg_itr->gyft_id;
+            g.gyfter = tg_itr->gyfter;
+            g.gyftee = tg_itr->gyftee;
+            g.gyfter_issue = tg_itr->gyfter_issue;
+            g.gyftee_issue = tg_itr->gyftee_issue;
+            g.relationship = tg_itr->relationship;
+            g.notes = tg_itr->notes;
+            g.gyft_date = tg_itr->gyft_date;
+            g.likes = tg_itr->likes;            
+        });
+        tg_itr++;
+    }
+
+    tg_itr = tg_t.begin();
+    while (tg_itr != tg_t.end()) {
+        tg_itr = tg_t.erase(tg_itr);
+    }
+}
+
 // ACTION gyftietoken::copybal1 ()
 // {
 //     require_auth ("zombiejigsaw"_n);
@@ -153,20 +213,131 @@ ACTION gyftietoken::delconfig ()
     config.remove();
 }
 
-// ACTION gyftietoken::sudoprofile (name account) 
+// ACTION gyftietoken::setvalidator (name account, uint8_t active_validator)
 // {
-//     require_auth (get_self());
-//     eosio_assert (is_tokenholder(account), "Account is not a token holder.");
+//     require_auth (account);
+//     eosio_assert (is_tokenholder (account), "Account is not a GFT token holder.");
+//     eosio_assert (! is_paused(), "Contract is paused." );
 
-//     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-//     accounts a_t (get_self(), account.value);
-//     auto a_itr = a_t.find(sym.code().raw());
+//     profile_table p_t (get_self(), get_self().value);
+//     auto p_itr = p_t.find (account.value);
+//     eosio_assert (p_itr != p_t.end(), "Account not found.");
 
-//     insert_profile (account, a_itr->idhash);
+//     p_t.modify (p_itr, get_self(), [&](auto &p) {
+//         p.active_validator = active_validator;
+//     });
 // }
+
+ACTION gyftietoken::nchallenge (name challenger_account, name challenged_account, string note)
+{
+    require_auth (challenger_account);
+    permit_account(challenger_account);
+    eosio_assert (challenger_account != challenged_account, "Account cannot challenge itself.");
+    eosio_assert (is_tokenholder (challenger_account), "Challenger is not a GFT token holder.");
+    eosio_assert (is_tokenholder (challenged_account), "Challenged account is not a GFT token holder.");
+    eosio_assert (! is_paused(), "Contract is paused." );
+
+    challenge_table c_t (get_self(), get_self().value);
+    auto challenged_index = c_t.get_index<"bychallenged"_n>();
+    auto c_itr = challenged_index.find(challenged_account.value);
+
+    if (c_itr != challenged_index.end()) {
+        while (c_itr != challenged_index.end()) {
+            if (c_itr->status != VALIDATED) {
+                string new_challenge_note { "New challenge from: " + name {challenged_account}.to_string() };
+                challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
+                    c.challenge_notes.push_back (new_challenge_note);
+                    c.challenge_notes.push_back (note);
+                });
+            }
+            c_itr++;
+        }        
+    } else {
+        c_t.emplace (get_self(), [&](auto &c) {
+            c.challenge_id = c_t.available_primary_key();
+            c.challenged_account = challenged_account;
+            c.challenger_account = challenger_account;
+            c.challenged_time = now();
+            c.challenge_notes.push_back (note);
+            c.status = NEW_CHALLENGE;
+        });
+    }
+}
+
+ACTION gyftietoken::addcidnote (name scribe, uint64_t challenge_id, string note)
+{
+    require_auth (scribe);
+    eosio_assert (is_tokenholder (scribe), "Scribe is not a GFT token holder.");
+    eosio_assert (! is_paused(), "Contract is paused." );
+
+    challenge_table c_t (get_self(), get_self().value);
+    auto c_itr = c_t.find (challenge_id);
+    eosio_assert (c_itr != c_t.end(), "Challenge ID not found.");
+
+    c_t.modify (c_itr, get_self(), [&] (auto &c) {
+        c.challenge_notes.push_back (note);
+    });
+}
+
+ACTION gyftietoken::addcnote (name scribe, name challenged_account, string note)
+{
+    require_auth (scribe);
+    eosio_assert (is_tokenholder (scribe), "Scribe is not a GFT token holder.");
+    eosio_assert (! is_paused(), "Contract is paused." );
+
+    challenge_table c_t (get_self(), get_self().value);
+    auto challenged_index = c_t.get_index<"bychallenged"_n>();
+    auto c_itr = challenged_index.begin();
+    eosio_assert (c_itr != challenged_index.end(), "Account has not been challenged.");
+    
+    while (c_itr != challenged_index.end()) {
+        if (c_itr->status != VALIDATED) {
+            challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
+                c.challenge_notes.push_back (note);
+            });
+        }
+        c_itr++;
+    }
+}
+
+ACTION gyftietoken::validate (name validator, name account, string idhash, string id_expiration)
+{
+    permit_account(validator);
+    permit_validator(validator, account);
+    require_auth (validator);
+    eosio_assert (is_tokenholder (validator), "Validator is not a GFT token holder.");
+    eosio_assert (! is_paused(), "Contract is paused." );
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio_assert (p_itr != p_t.end(), "Account not found.");
+
+    challenge_table c_t (get_self(), get_self().value);
+    
+    if (p_itr->idhash.compare(idhash) == 0) {
+        challenge_table c_t (get_self(), get_self().value);
+        auto challenged_index = c_t.get_index<"bychallenged"_n>();
+        auto c_itr = challenged_index.begin();
+        eosio_assert (c_itr != challenged_index.end(), "Account has not been challenged.");
+        string note { "Validated by " + name {validator}.to_string() };
+
+        while (c_itr != challenged_index.end()) {
+            challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
+                c.status = VALIDATED;
+                c.challenge_notes.push_back (note);
+                c.validated_time = now();
+            });
+            c_itr++;
+        }
+    } else {
+        string note { "Validation failed with " + idhash };
+        addcnote (validator, account, note);
+    }
+}
 
 ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 {
+    permit_account(rater);
     availrating_table a_t (get_self(), rater.value);
     auto a_itr = a_t.find (ratee.value);
     eosio_assert (a_itr != a_t.end(), "Account is not available for rating.");
@@ -175,19 +346,13 @@ ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
 
     profile_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (ratee.value);
+    eosio_assert (p_itr != p_t.end(), "Account to rate is not found.");
     
-    if (p_itr == p_t.end()) {
-        p_t.emplace (get_self(), [&](auto &p) {
-            p.account = ratee;
-            p.rating_count = 1;
-            p.rating_sum = rating;
-        });
-    } else {
-        p_t.modify (p_itr, get_self(), [&](auto &p) {
-            p.rating_count++;
-            p.rating_sum += rating;
-        });
-    }
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+        p.rating_count++;
+        p.rating_sum += rating;
+    });
+    
     a_t.erase (a_itr);
 }
 
@@ -209,6 +374,7 @@ ACTION gyftietoken::removeprop (uint64_t proposal_id)
 ACTION gyftietoken::propose (name proposer,
                                 string notes) 
 {
+    permit_account(proposer);
     eosio_assert (! is_paused(), "Contract is paused." );
     require_auth (proposer);
     eosio_assert (is_tokenholder (proposer), "Proposer is not a GFT token holder.");
@@ -306,9 +472,11 @@ ACTION gyftietoken::calcgyft (name from, name to)
 ACTION gyftietoken::gyft (name from, 
                             name to, 
                             string idhash,
-                            string relationship) 
+                            string relationship)
+                            //string id_expiration) 
 {
     eosio_assert (! is_paused(), "Contract is paused." );
+    permit_account(from);
 
     require_auth (from);
     eosio_assert (is_tokenholder (from), "Gyfter must be a GFT token holder.");
@@ -488,7 +656,8 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
 ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
 {
     eosio_assert (! is_paused(), "Contract is paused." );
-
+    permit_account(from);
+    
     eosio_assert(from != to, "cannot transfer to self");
 
     config_table config (get_self(), get_self().value);
@@ -581,5 +750,6 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(setcount)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
-                            (removeprop)(setcounter)(ungyft))
+                            (removeprop)(setcounter)(ungyft)(miggyftss1)(miggyftss2)
+                            (nchallenge)(validate)(addcidnote)(addcnote))
                             // (copybal1)(remaccounts)(repopaccts)(remtemp)
