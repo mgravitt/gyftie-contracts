@@ -16,10 +16,10 @@ CONTRACT gyftietoken : public contract
     using contract::contract;
 
   public:
-    // ACTION copybal1();
-    // ACTION remaccounts();
-    // ACTION repopaccts();
-    // ACTION remtemp();
+    ACTION copybal1();
+    ACTION remaccounts();
+    ACTION repopaccts();
+    ACTION remtemp();
 
     ACTION miggyftss1();
 
@@ -130,19 +130,20 @@ CONTRACT gyftietoken : public contract
     TABLE account
     {
         asset balance;
+        // DEPLOY
         string idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index<"accounts"_n, account> accounts;
 
-    TABLE tempacc
-    {
-        name account;
-        asset balance;
-        uint64_t primary_key() const { return account.value; }
-    };
+    // TABLE tempacc
+    // {
+    //     name account;
+    //     asset balance;
+    //     uint64_t primary_key() const { return account.value; }
+    // };
 
-    typedef eosio::multi_index<"tempaccts"_n, tempacc> tempacct_table;
+    // typedef eosio::multi_index<"tempaccts"_n, tempacc> tempacct_table;
 
     TABLE profile
     {
@@ -151,23 +152,25 @@ CONTRACT gyftietoken : public contract
         uint16_t    rating_count;
         string      idhash;
         string      id_expiration;
-        // uint8_t     active_validator;
-        // asset       gft_balance;
+
+        // DEPLOY
+        //asset       gft_balance;
+        //asset       staked_balance;
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
 
-    // TABLE tprofile
-    // {
-    //     name account;
-    //     uint32_t rating_sum;
-    //     uint16_t rating_count;
-    //     string idhash;
-    //     string id_expiration;
-
-    //     uint64_t primary_key() const { return account.value; }
-    // };
-    // typedef eosio::multi_index<"tprofiles"_n, tprofile> ptrofile_table;
+    TABLE tprofile
+    {
+        name        account;
+        uint32_t    rating_sum;
+        uint16_t    rating_count;
+        string      idhash;
+        string      id_expiration;
+        asset       gft_balance;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"tprofiles"_n, tprofile> tprofile_table;
 
     TABLE challenge 
     {
@@ -217,7 +220,8 @@ CONTRACT gyftietoken : public contract
         uint64_t    by_gyftee() const { return gyftee.value; }
     };
 
-    typedef eosio::multi_index<"gyfts"_n, gyftevent,
+    typedef eosio::multi_index<"gyfts"_n, gyftevent
+    ,
                                indexed_by<"bygyfter"_n,
                                    const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyfter>>,
                                indexed_by<"bygyftee"_n,
@@ -225,29 +229,29 @@ CONTRACT gyftietoken : public contract
                                >
         gyft_table;
 
-    TABLE tgyftevent
-    {
-        uint64_t    gyft_id;
-        name        gyfter;
-        name        gyftee;
-        asset       gyfter_issue;
-        asset       gyftee_issue;
-        string      relationship;
-        string      notes;
-        uint32_t    gyft_date;
-        uint16_t    likes;
-        uint64_t    primary_key() const { return gyft_id; }
-        uint64_t    by_gyfter() const { return gyfter.value; }
-        uint64_t    by_gyftee() const { return gyftee.value; }
-    };
+    // TABLE tgyftevent
+    // {
+    //     uint64_t    gyft_id;
+    //     name        gyfter;
+    //     name        gyftee;
+    //     asset       gyfter_issue;
+    //     asset       gyftee_issue;
+    //     string      relationship;
+    //     string      notes;
+    //     uint32_t    gyft_date;
+    //     uint16_t    likes;
+    //     uint64_t    primary_key() const { return gyft_id; }
+    //     uint64_t    by_gyfter() const { return gyfter.value; }
+    //     uint64_t    by_gyftee() const { return gyftee.value; }
+    // };
 
-    typedef eosio::multi_index<"tgyfts"_n, tgyftevent,
-                               indexed_by<"bygyfter"_n,
-                                   const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyfter>>,
-                               indexed_by<"bygyftee"_n,
-                                   const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyftee>>
-                               >
-        tgyft_table;
+    // typedef eosio::multi_index<"tgyfts"_n, tgyftevent,
+    //                            indexed_by<"bygyfter"_n,
+    //                                const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyfter>>,
+    //                            indexed_by<"bygyftee"_n,
+    //                                const_mem_fun<tgyftevent, uint64_t, &tgyftevent::by_gyftee>>
+    //                            >
+    //     tgyft_table;
 
     TABLE currency_stats
     {
@@ -502,6 +506,9 @@ CONTRACT gyftietoken : public contract
             p.rating_count = 0;
             p.rating_sum = 0;
             p.idhash = idhash;
+            // DEPLOY
+            // p.gft_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+            // p.staked_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
         });
     }
 

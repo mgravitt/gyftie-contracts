@@ -11,157 +11,189 @@ ACTION gyftietoken::setcount (uint32_t count)
 
 ACTION gyftietoken::miggyftss1 ()
 {
-    require_auth (get_self());
-    gyft_table g_t (get_self(), get_self().value);
-    auto g_itr = g_t.begin();
+    // require_auth (get_self());
+    // gyft_table g_t (get_self(), get_self().value);
+    // auto g_itr = g_t.begin();
 
-    tgyft_table tg_t (get_self(), get_self().value);
+    // tgyft_table tg_t (get_self(), get_self().value);
     
-    while (g_itr != g_t.end()) {
-        tg_t.emplace (get_self(), [&] (auto& tg) {
-            tg.gyft_id = g_itr->gyft_id;
-            tg.gyfter = g_itr->gyfter;
-            tg.gyftee = g_itr->gyftee;
-            tg.gyfter_issue = g_itr->gyfter_issue;
-            tg.gyftee_issue = g_itr->gyftee_issue;
-            tg.relationship = g_itr->relationship;
-            tg.notes = g_itr->notes;
-            tg.gyft_date = g_itr->gyft_date;
-            tg.likes = g_itr->likes;            
-        });
-       g_itr++;
-    }
+    // while (g_itr != g_t.end()) {
+    //     tg_t.emplace (get_self(), [&] (auto& tg) {
+    //         tg.gyft_id = g_itr->gyft_id;
+    //         tg.gyfter = g_itr->gyfter;
+    //         tg.gyftee = g_itr->gyftee;
+    //         tg.gyfter_issue = g_itr->gyfter_issue;
+    //         tg.gyftee_issue = g_itr->gyftee_issue;
+    //         tg.relationship = g_itr->relationship;
+    //         tg.notes = g_itr->notes;
+    //         tg.gyft_date = g_itr->gyft_date;
+    //         tg.likes = g_itr->likes;            
+    //     });
+    //    g_itr++;
+    // }
 
-    g_itr = g_t.begin();
-    while (g_itr != g_t.end()) {
-        g_itr = g_t.erase(g_itr);
-    }
+    // g_itr = g_t.begin();
+    // while (g_itr != g_t.end()) {
+    //     g_itr = g_t.erase(g_itr);
+    // }
 }
 
 
 ACTION gyftietoken::miggyftss2 ()
 {
-    require_auth (get_self());
-    tgyft_table tg_t (get_self(), get_self().value);
-    auto tg_itr = tg_t.begin();
+    // require_auth (get_self());
+    // tgyft_table tg_t (get_self(), get_self().value);
+    // auto tg_itr = tg_t.begin();
 
-    gyft_table g_t (get_self(), get_self().value);
+    // gyft_table g_t (get_self(), get_self().value);
     
-    while (tg_itr != tg_t.end()) {
-        g_t.emplace (get_self(), [&] (auto& g) {
-            g.gyft_id = tg_itr->gyft_id;
-            g.gyfter = tg_itr->gyfter;
-            g.gyftee = tg_itr->gyftee;
-            g.gyfter_issue = tg_itr->gyfter_issue;
-            g.gyftee_issue = tg_itr->gyftee_issue;
-            g.relationship = tg_itr->relationship;
-            g.notes = tg_itr->notes;
-            g.gyft_date = tg_itr->gyft_date;
-            g.likes = tg_itr->likes;            
-        });
-        tg_itr++;
-    }
+    // while (tg_itr != tg_t.end()) {
+    //     g_t.emplace (get_self(), [&] (auto& g) {
+    //         g.gyft_id = tg_itr->gyft_id;
+    //         g.gyfter = tg_itr->gyfter;
+    //         g.gyftee = tg_itr->gyftee;
+    //         g.gyfter_issue = tg_itr->gyfter_issue;
+    //         g.gyftee_issue = tg_itr->gyftee_issue;
+    //         g.relationship = tg_itr->relationship;
+    //         g.notes = tg_itr->notes;
+    //         g.gyft_date = tg_itr->gyft_date;
+    //         g.likes = tg_itr->likes;            
+    //     });
+    //     tg_itr++;
+    // }
 
-    tg_itr = tg_t.begin();
-    while (tg_itr != tg_t.end()) {
-        tg_itr = tg_t.erase(tg_itr);
+    // tg_itr = tg_t.begin();
+    // while (tg_itr != tg_t.end()) {
+    //     tg_itr = tg_t.erase(tg_itr);
+    // }
+}
+
+ACTION gyftietoken::copybal1 ()
+{
+    require_auth ("zombiejigsaw"_n);
+
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();
+
+    profile_table p_t (get_self(), get_self().value);
+    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+    accounts a_t (get_self(), c.gftorderbook.value);
+    auto a_itr = a_t.find (gft_symbol.code().raw());
+
+    tprofile_table tp_t (get_self(), get_self().value); 
+    tp_t.emplace (get_self(), [&](auto &t) {
+        t.account = c.gftorderbook;
+        t.gft_balance = a_itr->balance;
+        t.idhash = "GFT Order Book Account";
+    });
+
+    a_t = accounts (get_self(), c.gyftie_foundation.value);
+    a_itr = a_t.find (gft_symbol.code().raw());
+
+    tp_t.emplace (get_self(), [&](auto &t) {
+        t.account = c.gyftie_foundation;
+        t.gft_balance = a_itr->balance;
+        t.idhash = "Gyftie Limited Account";
+    });
+
+    auto p_itr = p_t.begin();
+    while (p_itr != p_t.end()) {
+        if (p_itr->account == c.gftorderbook || p_itr->account == c.gyftie_foundation) {
+
+        } else {
+            a_t = accounts (get_self(), p_itr->account.value);
+            a_itr = a_t.find (gft_symbol.code().raw());
+
+            tp_t.emplace (get_self(), [&](auto& t) {
+                t.account = p_itr->account;
+                t.rating_sum = p_itr->rating_sum;
+                t.rating_count = p_itr->rating_count;
+                t.idhash = p_itr->idhash;
+                t.id_expiration = p_itr->id_expiration;
+                t.gft_balance = a_itr->balance;
+            });
+        }
+        
+        p_itr++;
     }
 }
 
-// ACTION gyftietoken::copybal1 ()
-// {
-//     require_auth ("zombiejigsaw"_n);
+ACTION gyftietoken::remaccounts ()
+{
+    require_auth ("zombiejigsaw"_n);
 
-//     config_table config (get_self(), get_self().value);
-//     Config c = config.get();
-
-//     profile_table p_t (get_self(), get_self().value);
-//     tempacct_table t_t (get_self(), get_self().value);
-//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-
-//     accounts a_t (get_self(), c.gftorderbook.value);
-//     auto a_itr = a_t.find (gft_symbol.code().raw());
-
-//     t_t.emplace (get_self(), [&](auto &t) {
-//         t.account = c.gftorderbook;
-//         t.balance = a_itr->balance;
-//     });
-
-//     a_t = accounts (get_self(), c.gyftie_foundation.value);
-//     a_itr = a_t.find (gft_symbol.code().raw());
-
-//     t_t.emplace (get_self(), [&](auto &t) {
-//         t.account = c.gyftie_foundation;
-//         t.balance = a_itr->balance;
-//     });
-
-//     auto p_itr = p_t.begin();
-//     while (p_itr != p_t.end()) {
-//         a_t = accounts (get_self(), p_itr->account.value);
-//         a_itr = a_t.find (gft_symbol.code().raw());
-
-//         t_t.emplace (get_self(), [&](auto& t) {
-//             t.account = p_itr->account;
-//             t.balance = a_itr->balance;
-//         });
-//         p_itr++;
-//     }
-// }
-
-// ACTION gyftietoken::remaccounts ()
-// {
-//     require_auth ("zombiejigsaw"_n);
-
-//     config_table config (get_self(), get_self().value);
-//     Config c = config.get();    
+    config_table config (get_self(), get_self().value);
+    Config c = config.get();    
     
-//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
-//     accounts a_t (get_self(), c.gftorderbook.value);
-//     auto a_itr = a_t.find (gft_symbol.code().raw());
-//     a_t.erase (a_itr);
+    accounts a_t (get_self(), c.gftorderbook.value);
+    auto a_itr = a_t.find (gft_symbol.code().raw());
+    a_t.erase (a_itr);
 
-//     a_t = accounts (get_self(), c.gyftie_foundation.value);
-//     a_itr = a_t.find (gft_symbol.code().raw());
-//     a_t.erase (a_itr);
+    a_t = accounts (get_self(), c.gyftie_foundation.value);
+    a_itr = a_t.find (gft_symbol.code().raw());
+    a_t.erase (a_itr);
 
-//     profile_table p_t (get_self(), get_self().value);
+    profile_table p_t (get_self(), get_self().value);
 
-//     auto p_itr = p_t.begin();
-//     while (p_itr != p_t.end()) {
-//         accounts a_t (get_self(), p_itr->account.value);
-//         auto a_itr = a_t.find (gft_symbol.code().raw());
-//         a_t.erase (a_itr);
-//         p_itr++;
-//     }
-// }
+    auto p_itr = p_t.begin();
+    while (p_itr != p_t.end()) {
+        accounts a_t (get_self(), p_itr->account.value);
+        auto a_itr = a_t.find (gft_symbol.code().raw());
+        if (a_itr != a_t.end()) {
+            a_t.erase (a_itr);
+        }
+        p_itr++;
+    }
 
-// ACTION gyftietoken::repopaccts ()
-// {
-//     require_auth ("zombiejigsaw"_n);
+    p_itr = p_t.begin();
+    while (p_itr != p_t.end()) {
+       p_itr = p_t.erase (p_itr);
+    }
+}
+
+ACTION gyftietoken::repopaccts ()
+{
+    require_auth ("zombiejigsaw"_n);
   
-//     tempacct_table t_t (get_self(), get_self().value);
-//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    tprofile_table tp_t (get_self(), get_self().value);
+    symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
 
-//     auto t_itr = t_t.begin();
-//     while (t_itr != t_t.end()) {
-//         accounts a_t (get_self(), t_itr->account.value);
-//         a_t.emplace (get_self(), [&](auto &a) {
-//             a.balance = t_itr->balance;
-//         });
-//         t_itr++;
-//     }
-// }
+    profile_table p_t (get_self(), get_self().value);
 
-// ACTION gyftietoken::remtemp () 
-// {
-//     require_auth ("zombiejigsaw"_n);
-//     tempacct_table t_t (get_self(), get_self().value);
-//     auto t_itr = t_t.begin();
-//     while (t_itr != t_t.end()) {
-//         t_itr = t_t.erase (t_itr);
-//     }
-// }
+    auto tp_itr = tp_t.begin();
+    while (tp_itr != tp_t.end()) {
+        accounts a_t (get_self(), tp_itr->account.value);
+        a_t.emplace (get_self(), [&](auto &a) {
+            a.balance = tp_itr->gft_balance;
+        });
+
+        p_t.emplace (get_self(), [&](auto &p) {
+            p.account = tp_itr->account;
+            p.rating_sum = tp_itr->rating_sum;
+            p.rating_count = tp_itr->rating_count;
+            p.idhash = tp_itr->idhash;
+            p.id_expiration = tp_itr->id_expiration;
+            // DEPLOY
+            // p.gft_balance = tp_itr->gft_balance;
+            // p.staked_balance = asset {0, gft_symbol};
+        });
+
+        tp_itr++;
+    }
+}
+
+ACTION gyftietoken::remtemp () 
+{
+    require_auth ("zombiejigsaw"_n);
+    tprofile_table tp_t (get_self(), get_self().value);
+    auto tp_itr = tp_t.begin();
+    while (tp_itr != tp_t.end()) {
+        tp_itr = tp_t.erase (tp_itr);
+    }
+}
 
 ACTION gyftietoken::setconfig (name token_gen,
                                 name gftorderbook,
@@ -176,6 +208,17 @@ ACTION gyftietoken::setconfig (name token_gen,
     c.gyftie_foundation = gyftie_foundation;
     c.paused = PAUSED;
     config.set (c, get_self());
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (gftorderbook.value);
+    if (p_itr == p_t.end()) {
+        insert_profile (gftorderbook, "GFT Order Book Account");
+    }
+
+    p_itr = p_t.find (gyftie_foundation.value);
+    if (p_itr == p_t.end()) {
+        insert_profile (gyftie_foundation, "Gyftie Limited Account");
+    }
 }
 
 ACTION gyftietoken::pause () 
@@ -718,6 +761,15 @@ void gyftietoken::sub_balance(name owner, asset value)
     from_acnts.modify(from, get_self(), [&](auto &a) {
         a.balance -= value;
     });
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (owner.value);
+    eosio_assert (p_itr != p_t.end(), "Account not found.");
+
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+        // DEPLOY
+        // p.gft_balance -= value;
+    });
 }
 
 void gyftietoken::add_balance(name owner, asset value, name ram_payer)
@@ -745,11 +797,19 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
             a.balance += value;
         });
     }
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (owner.value);
+    eosio_assert (p_itr != p_t.end(), "Account not found.");
+
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+        // DEPLOY
+        // p.gft_balance += value;
+    });
 }
 
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(setcount)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
                             (removeprop)(setcounter)(ungyft)(miggyftss1)(miggyftss2)
-                            (nchallenge)(validate)(addcidnote)(addcnote))
-                            // (copybal1)(remaccounts)(repopaccts)(remtemp)
+                            (nchallenge)(validate)(addcidnote)(addcnote)
+                            (copybal1)(remaccounts)(repopaccts)(remtemp))
