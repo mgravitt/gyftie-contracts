@@ -119,6 +119,19 @@ ACTION gyftietoken::copybal1 ()
     }
 }
 
+ACTION gyftietoken::crprof ()
+{
+    require_auth ("zombiejigsaw"_n);
+    profile_table p_t (get_self(), get_self().value);
+
+    p_t.emplace (get_self(), [&](auto &p) {
+        p.account = get_self();
+        p.gft_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+        p.idhash = "Gyftie Token Account";
+    });       
+
+}
+
 ACTION gyftietoken::remaccounts ()
 {
     require_auth ("zombiejigsaw"_n);
@@ -177,8 +190,8 @@ ACTION gyftietoken::repopaccts ()
             p.idhash = tp_itr->idhash;
             p.id_expiration = tp_itr->id_expiration;
             // DEPLOY
-            // p.gft_balance = tp_itr->gft_balance;
-            // p.staked_balance = asset {0, gft_symbol};
+            p.gft_balance = tp_itr->gft_balance;
+            p.staked_balance = asset {0, gft_symbol};
         });
 
         tp_itr++;
@@ -280,67 +293,50 @@ ACTION gyftietoken::nchallenge (name challenger_account, name challenged_account
     eosio_assert (is_tokenholder (challenged_account), "Challenged account is not a GFT token holder.");
     eosio_assert (! is_paused(), "Contract is paused." );
 
-    challenge_table c_t (get_self(), get_self().value);
-    auto challenged_index = c_t.get_index<"bychallenged"_n>();
-    auto c_itr = challenged_index.find(challenged_account.value);
-
-    if (c_itr != challenged_index.end()) {
-        while (c_itr != challenged_index.end()) {
-            if (c_itr->status != VALIDATED) {
-                string new_challenge_note { "New challenge from: " + name {challenged_account}.to_string() };
-                challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
-                    c.challenge_notes.push_back (new_challenge_note);
-                    c.challenge_notes.push_back (note);
-                });
-            }
-            c_itr++;
-        }        
-    } else {
-        c_t.emplace (get_self(), [&](auto &c) {
-            c.challenge_id = c_t.available_primary_key();
-            c.challenged_account = challenged_account;
-            c.challenger_account = challenger_account;
-            c.challenged_time = now();
-            c.challenge_notes.push_back (note);
-            c.status = NEW_CHALLENGE;
-        });
-    }
-}
-
-ACTION gyftietoken::addcidnote (name scribe, uint64_t challenge_id, string note)
-{
-    require_auth (scribe);
-    eosio_assert (is_tokenholder (scribe), "Scribe is not a GFT token holder.");
-    eosio_assert (! is_paused(), "Contract is paused." );
+    asset challenge_stake = adjust_asset (getgftbalance (challenged_account), (float) 0.10000000);
+    stake (challenger_account, challenge_stake);
 
     challenge_table c_t (get_self(), get_self().value);
-    auto c_itr = c_t.find (challenge_id);
-    eosio_assert (c_itr != c_t.end(), "Challenge ID not found.");
+    auto c_itr = c_t.find(challenged_account.value);
+    eosio_assert (c_itr == c_t.end(), "Account has already been challenged.");
 
-    c_t.modify (c_itr, get_self(), [&] (auto &c) {
+    c_t.emplace (get_self(), [&](auto &c) {
+        c.challenged_account = challenged_account;
+        c.challenger_account = challenger_account;
+        c.challenged_time = now();
         c.challenge_notes.push_back (note);
+        c.challenge_stake = challenge_stake;
     });
 }
+
+// ACTION gyftietoken::addcidnote (name scribe, uint64_t challenge_id, string note)
+// {
+//     require_auth (scribe);
+//     eosio_assert (is_tokenholder (scribe), "Scribe is not a GFT token holder.");
+//     eosio_assert (! is_paused(), "Contract is paused." );
+
+//     challenge_table c_t (get_self(), get_self().value);
+//     auto c_itr = c_t.find (challenge_id);
+//     eosio_assert (c_itr != c_t.end(), "Challenge ID not found.");
+
+//     c_t.modify (c_itr, get_self(), [&] (auto &c) {
+//         c.challenge_notes.push_back (note);
+//     });
+// }
 
 ACTION gyftietoken::addcnote (name scribe, name challenged_account, string note)
 {
     require_auth (scribe);
-    eosio_assert (is_tokenholder (scribe), "Scribe is not a GFT token holder.");
+    permit_account (scribe);
     eosio_assert (! is_paused(), "Contract is paused." );
 
     challenge_table c_t (get_self(), get_self().value);
-    auto challenged_index = c_t.get_index<"bychallenged"_n>();
-    auto c_itr = challenged_index.begin();
-    eosio_assert (c_itr != challenged_index.end(), "Account has not been challenged.");
-    
-    while (c_itr != challenged_index.end()) {
-        if (c_itr->status != VALIDATED) {
-            challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
-                c.challenge_notes.push_back (note);
-            });
-        }
-        c_itr++;
-    }
+    auto c_itr = c_t.find (challenged_account.value);
+    eosio_assert (c_itr != c_t.end(), "Account does not have an active challenge.");
+
+    c_t.modify (c_itr, get_self(), [&] (auto &c) {
+        c.challenge_notes.push_back (note);
+    });
 }
 
 ACTION gyftietoken::validate (name validator, name account, string idhash, string id_expiration)
@@ -355,27 +351,33 @@ ACTION gyftietoken::validate (name validator, name account, string idhash, strin
     auto p_itr = p_t.find (account.value);
     eosio_assert (p_itr != p_t.end(), "Account not found.");
 
+    eosio_assert (p_itr->idhash.compare(idhash) == 0, "ID hash provided does not match records. Account not validated.");
+      
     challenge_table c_t (get_self(), get_self().value);
-    
-    if (p_itr->idhash.compare(idhash) == 0) {
-        challenge_table c_t (get_self(), get_self().value);
-        auto challenged_index = c_t.get_index<"bychallenged"_n>();
-        auto c_itr = challenged_index.begin();
-        eosio_assert (c_itr != challenged_index.end(), "Account has not been challenged.");
-        string note { "Validated by " + name {validator}.to_string() };
+    auto c_itr = c_t.find (account.value);
+    eosio_assert (c_itr != c_t.end(), "Account does not have an active challenge.");
 
-        while (c_itr != challenged_index.end()) {
-            challenged_index.modify (c_itr, get_self(), [&] (auto &c) {
-                c.status = VALIDATED;
-                c.challenge_notes.push_back (note);
-                c.validated_time = now();
-            });
-            c_itr++;
-        }
-    } else {
-        string note { "Validation failed with " + idhash };
-        addcnote (validator, account, note);
-    }
+    unstake (c_itr->challenger_account, c_itr->challenge_stake);
+
+    asset validator_amount = adjust_asset (c_itr->challenge_stake, (float) 0.500000000);
+    asset challenged_amount = c_itr->challenge_stake - validator_amount;
+
+    string to_validator_memo = string { "GFT-reward to the Validator. See 'How Gyftie Works' document - ask us for link." };
+    string to_challenged_memo = string { "GFT-reward to the Challenged-then-Validated Account. See 'How Gyftie Works' document - ask us for link." };
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        get_self(), "transfer"_n,
+        std::make_tuple(c_itr->challenger_account, validator, validator_amount, to_validator_memo))
+    .send();
+
+    action (
+        permission_level{get_self(), "owner"_n},
+        get_self(), "transfer"_n,
+        std::make_tuple(c_itr->challenger_account, c_itr->challenged_account, challenged_amount, to_challenged_memo))
+    .send();
+
+    c_t.erase (c_itr);    
 }
 
 ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
@@ -702,14 +704,10 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     permit_account(from);
     
     eosio_assert(from != to, "cannot transfer to self");
+    eosio_assert (has_auth (get_self()) || has_auth (from), "Permission denied - cannot transfer.");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
-    if (to == c.gftorderbook) {
-        eosio_assert (has_auth (get_self()) || has_auth (from), "Permission denied - only token contract and token owner can transfer to order book.");
-    } else {
-        require_auth(from);
-    }
 
     eosio_assert(is_account(to), "to account does not exist");    
     eosio_assert(is_gyftie_account(to) || c.gftorderbook == to || c.gyftie_foundation == to, "Recipient is not a Gyftie account. Must Gyft first.");
@@ -765,10 +763,12 @@ void gyftietoken::sub_balance(name owner, asset value)
     profile_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (owner.value);
     eosio_assert (p_itr != p_t.end(), "Account not found.");
+    // DEPLOY
+    eosio_assert (p_itr->gft_balance >= value, "overdrawn balance - GFT is staked");
 
     p_t.modify (p_itr, get_self(), [&](auto &p) {
         // DEPLOY
-        // p.gft_balance -= value;
+        p.gft_balance -= value;
     });
 }
 
@@ -803,7 +803,7 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 
     p_t.modify (p_itr, get_self(), [&](auto &p) {
         // DEPLOY
-        // p.gft_balance += value;
+        p.gft_balance += value;
     });
 }
 
@@ -811,5 +811,5 @@ void gyftietoken::add_balance(name owner, asset value, name ram_payer)
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(setcount)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)
                             (removeprop)(setcounter)(ungyft)(miggyftss1)(miggyftss2)
-                            (nchallenge)(validate)(addcidnote)(addcnote)
+                            (nchallenge)(validate)(addcnote)(crprof)
                             (copybal1)(remaccounts)(repopaccts)(remtemp))
