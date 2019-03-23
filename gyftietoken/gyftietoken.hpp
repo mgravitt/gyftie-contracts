@@ -16,16 +16,16 @@ CONTRACT gyftietoken : public contract
     using contract::contract;
 
   public:
-    ACTION copybal1();
-    ACTION remaccounts();
-    ACTION repopaccts();
+    // ACTION copybal1();
+    // ACTION remaccounts();
+    // ACTION repopaccts();
     ACTION remtemp();
 
-    ACTION miggyftss1();
+    // ACTION miggyftss1();
 
-    ACTION miggyftss2(); 
+    // ACTION miggyftss2(); 
 
-    ACTION setcount (uint32_t count);
+    // ACTION setcount (uint32_t count);
 
     ACTION setconfig(name token_gen, name gftorderbook, name gyftie_foundation);
 
@@ -35,7 +35,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION create();
 
-    ACTION crprof();
+    // ACTION crprof();
 
     ACTION issue(name to, asset quantity, string memo);
 
@@ -47,7 +47,13 @@ CONTRACT gyftietoken : public contract
 
     ACTION calcgyft(name from, name to);
 
-    ACTION gyft(name from, name to, string idhash, string relationship); //, string id_expiration);
+    ACTION gyft2 (name from, 
+                    name to, 
+                    string idhash,
+                    string relationship,
+                    string id_expiration);
+
+    ACTION gyft(name from, name to, string idhash, string relationship);
 
     ACTION ungyft(name account);
 
@@ -137,7 +143,7 @@ CONTRACT gyftietoken : public contract
     {
         asset balance;
         // DEPLOY
-        //string idhash;
+        // string idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index<"accounts"_n, account> accounts;
@@ -517,7 +523,9 @@ CONTRACT gyftietoken : public contract
         return is_gyftie;
     }
 
-    void insert_profile(const name account, const string idhash)
+    void insert_profile(const name account, 
+                        const string idhash,
+                        const string id_expiration)
     {
         profile_table p_t(get_self(), get_self().value);
         auto p_itr = p_t.find(account.value);
@@ -528,7 +536,8 @@ CONTRACT gyftietoken : public contract
             p.rating_count = 0;
             p.rating_sum = 0;
             p.idhash = idhash;
-            // DEPLOY
+            p.id_expiration = id_expiration;
+            //DEPLOY
             p.gft_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
             p.staked_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
         });
