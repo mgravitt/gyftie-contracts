@@ -201,7 +201,7 @@
 
 ACTION gyftietoken::remtemp () 
 {
-   // require_auth ("zombiejigsaw"_n);
+    require_auth ("zombiejigsaw"_n);
     tprofile_table tp_t (get_self(), get_self().value);
     auto tp_itr = tp_t.begin();
     while (tp_itr != tp_t.end()) {
@@ -209,9 +209,9 @@ ACTION gyftietoken::remtemp ()
     }
 }
 
-ACTION gyftietoken::setconfig (name token_gen,
-                                name gftorderbook,
-                                name gyftie_foundation)
+ACTION gyftietoken::setconfig (const name token_gen,
+                                const name gftorderbook,
+                                const name gyftie_foundation)
 {
     require_auth (get_self());
         
@@ -253,7 +253,7 @@ ACTION gyftietoken::unpause ()
     config.set (c, get_self());
 }
 
-ACTION gyftietoken::setcounter (uint64_t account_count)
+ACTION gyftietoken::setcounter (const uint64_t account_count)
 {
     require_auth (get_self());
 
@@ -285,7 +285,7 @@ ACTION gyftietoken::delconfig ()
 //     });
 // }
 
-ACTION gyftietoken::nchallenge (name challenger_account, name challenged_account, string note)
+ACTION gyftietoken::nchallenge (const name challenger_account, const name challenged_account, const string note)
 {
     require_auth (challenger_account);
     permit_account(challenger_account);
@@ -325,7 +325,7 @@ ACTION gyftietoken::nchallenge (name challenger_account, name challenged_account
 //     });
 // }
 
-ACTION gyftietoken::addcnote (name scribe, name challenged_account, string note)
+ACTION gyftietoken::addcnote (const name scribe, const name challenged_account, const string note)
 {
     require_auth (scribe);
     permit_account (scribe);
@@ -340,7 +340,7 @@ ACTION gyftietoken::addcnote (name scribe, name challenged_account, string note)
     });
 }
 
-ACTION gyftietoken::validate (name validator, name account, string idhash, string id_expiration)
+ACTION gyftietoken::validate (const name validator, const name account, const string idhash, const string id_expiration)
 {
     permit_account(validator);
     permit_validator(validator, account);
@@ -381,7 +381,7 @@ ACTION gyftietoken::validate (name validator, name account, string idhash, strin
     c_t.erase (c_itr);    
 }
 
-ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
+ACTION gyftietoken::addrating (const name rater, const name ratee, const uint8_t rating)
 {
     permit_account(rater);
     availrating_table a_t (get_self(), rater.value);
@@ -402,7 +402,7 @@ ACTION gyftietoken::addrating (name rater, name ratee, uint8_t rating)
     a_t.erase (a_itr);
 }
 
-ACTION gyftietoken::removeprop (uint64_t proposal_id) 
+ACTION gyftietoken::removeprop (const uint64_t proposal_id) 
 {
     proposal_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find(proposal_id);
@@ -417,8 +417,8 @@ ACTION gyftietoken::removeprop (uint64_t proposal_id)
     p_t.erase (p_itr);
 }
 
-ACTION gyftietoken::propose (name proposer,
-                                string notes) 
+ACTION gyftietoken::propose (const name proposer,
+                                const string notes) 
 {
     permit_account(proposer);
     eosio_assert (! is_paused(), "Contract is paused." );
@@ -439,8 +439,8 @@ ACTION gyftietoken::propose (name proposer,
     });
 }
 
-ACTION gyftietoken::votefor (name voter,
-                            uint64_t proposal_id) 
+ACTION gyftietoken::votefor (const name voter,
+                            const uint64_t proposal_id) 
 {
     eosio_assert (! is_paused(), "Contract is paused." );
 
@@ -473,8 +473,8 @@ ACTION gyftietoken::votefor (name voter,
     // }
 }
 
-ACTION gyftietoken::voteagainst (name voter,
-                            uint64_t proposal_id) 
+ACTION gyftietoken::voteagainst (const name voter,
+                            const uint64_t proposal_id) 
 {
     eosio_assert (! is_paused(), "Contract is paused." );
 
@@ -514,19 +514,19 @@ ACTION gyftietoken::calcgyft (name from, name to)
     // .send();
 }
 
-ACTION gyftietoken::gyft (name from, 
-                            name to, 
-                            string idhash,
-                            string relationship)
+ACTION gyftietoken::gyft (const name from, 
+                            const name to, 
+                            const string idhash,
+                            const string relationship)
 {
     gyft2 (from, to, idhash, relationship, string {"No expiration date provided."});
 }
 
-ACTION gyftietoken::gyft2 (name from, 
-                            name to, 
-                            string idhash,
-                            string relationship,
-                            string id_expiration)
+ACTION gyftietoken::gyft2 (const name from, 
+                            const name to, 
+                            const string idhash,
+                            const string relationship,
+                            const string id_expiration)
 {
     eosio_assert (! is_paused(), "Contract is paused." );
     permit_account(from);
@@ -609,7 +609,7 @@ ACTION gyftietoken::gyft2 (name from,
     addgyft (from, to, issue_to_gyfter, issue_to_gyftee, relationship);
 }
 
-ACTION gyftietoken::ungyft(name account)
+ACTION gyftietoken::ungyft(const name account)
 {
     require_auth (get_self());
 
@@ -680,7 +680,7 @@ ACTION gyftietoken::create()
     insert_profile (get_self(), "ISSUER-HASH-PLACEHOLDER", "NO EXPIRATION");
 }
 
-ACTION gyftietoken::issue(name to, asset quantity, string memo)
+ACTION gyftietoken::issue(const name to, const asset quantity, const string memo)
 {
     auto sym = quantity.symbol;
     eosio_assert(sym.is_valid(), "invalid symbol name");
@@ -710,7 +710,7 @@ ACTION gyftietoken::issue(name to, asset quantity, string memo)
     }
 }
 
-ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
+ACTION gyftietoken::transfer(const name from, const name to, const asset quantity, const string memo)
 {
     eosio_assert (! is_paused(), "Contract is paused." );
     permit_account(from);
@@ -755,7 +755,7 @@ ACTION gyftietoken::transfer(name from, name to, asset quantity, string memo)
     add_balance(to, quantity, get_self());
 }
 
-void gyftietoken::sub_balance(name owner, asset value)
+void gyftietoken::sub_balance(const name owner, const asset value)
 {
     accounts from_acnts(_self, owner.value);
 
@@ -784,7 +784,7 @@ void gyftietoken::sub_balance(name owner, asset value)
     });
 }
 
-void gyftietoken::add_balance(name owner, asset value, name ram_payer)
+void gyftietoken::add_balance(const name owner, const asset value, const name ram_payer)
 {
     accounts to_acnts(_self, owner.value);
     auto to = to_acnts.find(value.symbol.code().raw());

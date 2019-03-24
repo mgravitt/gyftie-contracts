@@ -27,19 +27,19 @@ CONTRACT gyftietoken : public contract
 
     // ACTION setcount (uint32_t count);
 
-    ACTION setconfig(name token_gen, name gftorderbook, name gyftie_foundation);
+    ACTION setconfig(const name token_gen, const name gftorderbook, const name gyftie_foundation);
 
     ACTION delconfig();
 
-    ACTION addrating(name rater, name ratee, uint8_t rating);
+    ACTION addrating(const name rater, const name ratee, const uint8_t rating);
 
     ACTION create();
 
     // ACTION crprof();
 
-    ACTION issue(name to, asset quantity, string memo);
+    ACTION issue(const name to, const asset quantity, const string memo);
 
-    ACTION transfer(name from, name to, asset quantity, string memo);
+    ACTION transfer(const name from, const name to, const asset quantity, const string memo);
     
     // ACTION stake (name account, asset quantity);
 
@@ -47,35 +47,35 @@ CONTRACT gyftietoken : public contract
 
     ACTION calcgyft(name from, name to);
 
-    ACTION gyft2 (name from, 
-                    name to, 
-                    string idhash,
-                    string relationship,
-                    string id_expiration);
+    ACTION gyft2 (const name from, 
+                    const name to, 
+                    const string idhash,
+                    const string relationship,
+                    const string id_expiration);
 
-    ACTION gyft(name from, name to, string idhash, string relationship);
+    ACTION gyft(const name from, const name to, const string idhash, const string relationship);
 
-    ACTION ungyft(name account);
+    ACTION ungyft(const name account);
 
-    ACTION propose(name proposer, string notes);
+    ACTION propose(const name proposer, const string notes);
 
-    ACTION votefor(name voter, uint64_t proposal_id);
+    ACTION votefor(const name voter, const uint64_t proposal_id);
 
-    ACTION voteagainst(name voter, uint64_t proposal_id);
+    ACTION voteagainst(const name voter, const uint64_t proposal_id);
 
-    ACTION removeprop(uint64_t proposal_id);
+    ACTION removeprop(const uint64_t proposal_id);
 
-    ACTION setcounter(uint64_t account_count);
+    ACTION setcounter(const uint64_t account_count);
 
     // ACTION setvalidator (name account, uint8_t active_validator);
 
-    ACTION nchallenge (name challenger_account, name challenged_account, string notes);
+    ACTION nchallenge (const name challenger_account, const name challenged_account, const string notes);
 
-    ACTION validate (name validator, name account, string idhash, string id_expiration);
+    ACTION validate (const name validator, const name account, const string idhash, const string id_expiration);
 
     // ACTION addcidnote (name scribe, uint64_t challenge_id, string note);
 
-    ACTION addcnote (name scribe, name challenged_account, string note);
+    ACTION addcnote (const name scribe, const name challenged_account, const string note);
 
     ACTION pause();
 
