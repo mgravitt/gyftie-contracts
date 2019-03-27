@@ -1,8 +1,11 @@
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/time.hpp>
+#include <eosio/system.hpp>
 #include <string>
 #include <algorithm> // std::find
-#include <eosiolib/singleton.hpp>
+#include <eosio/singleton.hpp>
 #include <math.h>
 
 #include "includes/abieos_numeric.hpp"
@@ -30,6 +33,13 @@ CONTRACT gyftietoken : public contract
     ACTION setconfig(const name token_gen, const name gftorderbook, const name gyftie_foundation);
 
     ACTION delconfig();
+
+    ACTION setstate (const uint32_t account_count,
+                                const uint32_t prior_step_user_count,
+                                const uint32_t pol_user_count_decayx100,  // 2%
+                                const uint32_t pol_step_increasex100); 
+
+    ACTION printufact();
 
     ACTION addrating(const name rater, const name ratee, const uint8_t rating);
 
@@ -65,7 +75,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION removeprop(const uint64_t proposal_id);
 
-    ACTION setcounter(const uint64_t account_count);
+    // ACTION setcounter(const uint64_t account_count);
 
     // ACTION setvalidator (name account, uint8_t active_validator);
 
@@ -93,6 +103,8 @@ CONTRACT gyftietoken : public contract
     const uint8_t NEW_CHALLENGE=1;
     const uint8_t VALIDATED=2;
 
+    const uint64_t  SCALER = 100000000;
+
     TABLE Config
     {
         name token_gen;
@@ -111,6 +123,20 @@ CONTRACT gyftietoken : public contract
 
     typedef singleton<"counters"_n, Counter> counter_table;
     typedef eosio::multi_index<"counters"_n, Counter> counter_table_placeholder;
+
+    TABLE State 
+    {
+        uint32_t    user_count = 0;
+        uint32_t    prior_step_user_count;   
+
+        uint64_t    pol_scaled_user_count_decay;
+        uint64_t    pol_scaled_step_increase;
+
+        uint64_t    scaled_user_count_factor=100000000;
+    };
+
+    typedef singleton<"states"_n, State> state_table;
+    typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
 
     TABLE proposal
     {
@@ -402,7 +428,7 @@ CONTRACT gyftietoken : public contract
             g.gyftee_issue = gyftee_issue;
             g.relationship = relationship;
             // g.notes = notes;
-            g.gyft_date = now();
+            g.gyft_date = current_block_time().to_time_point().sec_since_epoch();
         });
     }
 
@@ -412,7 +438,7 @@ CONTRACT gyftietoken : public contract
 
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
-        eosio_assert (p_itr != p_t.end(), "Account profile not found.");
+        eosio::check (p_itr != p_t.end(), "Account profile not found.");
 
         p_t.modify (p_itr, get_self(), [&](auto &p) {
             // DEPLOY
@@ -426,7 +452,7 @@ CONTRACT gyftietoken : public contract
 
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
-        eosio_assert (p_itr != p_t.end(), "Account profile not found.");
+        eosio::check (p_itr != p_t.end(), "Account profile not found.");
 
         p_t.modify (p_itr, get_self(), [&](auto &p) {
             // DEPLOY
@@ -441,13 +467,13 @@ CONTRACT gyftietoken : public contract
 
     void permit_account (name account)
     {
-        eosio_assert ( is_gyftie_account (account), "Account is not a GFT token holder.");
+        eosio::check ( is_gyftie_account (account), "Account is not a GFT token holder.");
 
         challenge_table c_t (get_self(), get_self().value);
         auto c_itr = c_t.find(account.value);
 
         if (c_itr != c_t.end()) {
-            eosio_assert (c_itr->challenged_time <= now() + 60 * 60 * 24 * 7, "Account is locked until it is re-validated.");
+            eosio::check (c_itr->challenged_time <= current_block_time().to_time_point().sec_since_epoch() + 60 * 60 * 24 * 7, "Account is locked until it is re-validated.");
         }       
     }
 
@@ -458,7 +484,7 @@ CONTRACT gyftietoken : public contract
         auto gyfter_itr = gyfter_index.find(validator.value);
 
         while (gyfter_itr != gyfter_index.end()) {
-            eosio_assert (gyfter_itr->gyftee != challenged_account, "Validator cannot validate an account they gyfted.");
+            eosio::check (gyfter_itr->gyftee != challenged_account, "Validator cannot validate an account they gyfted.");
             gyfter_itr++;
         }
 
@@ -466,7 +492,7 @@ CONTRACT gyftietoken : public contract
         auto gyftee_itr = gyftee_index.find(validator.value);
 
         while (gyftee_itr != gyftee_index.end()) {
-            eosio_assert (gyftee_itr->gyfter != challenged_account, "Validator cannot validate their gyfter.");
+            eosio::check (gyftee_itr->gyfter != challenged_account, "Validator cannot validate their gyfter.");
             gyftee_itr++;
         }
     }
@@ -529,7 +555,7 @@ CONTRACT gyftietoken : public contract
     {
         profile_table p_t(get_self(), get_self().value);
         auto p_itr = p_t.find(account.value);
-        eosio_assert(p_itr == p_t.end(), "Account already has a profile.");
+        eosio::check(p_itr == p_t.end(), "Account already has a profile.");
 
         p_t.emplace(get_self(), [&](auto &p) {
             p.account = account;
@@ -545,22 +571,27 @@ CONTRACT gyftietoken : public contract
 
     void increment_account_count()
     {
-        counter_table counter(get_self(), get_self().value);
-        auto c = counter.get();
-        c.account_count++;
-        counter.set(c, get_self());
+        state_table state (get_self(), get_self().value);
+        auto s = state.get();
+        s.user_count++;
+        state.set (s, get_self());
+
+        // counter_table counter(get_self(), get_self().value);
+        // auto c = counter.get();
+        // c.account_count++;
+        // counter.set(c, get_self());
     }
 
     void burn(name account, asset quantity)
     {
         stats statstable(get_self(), quantity.symbol.code().raw());
         auto existing = statstable.find(quantity.symbol.code().raw());
-        eosio_assert(existing != statstable.end(), "token with symbol does not exist");
+        eosio::check(existing != statstable.end(), "token with symbol does not exist");
         const auto &st = *existing;
 
-        eosio_assert(quantity.is_valid(), "invalid quantity");
-        eosio_assert(quantity.amount > 0, "must issue positive quantity");
-        eosio_assert(quantity.symbol == st.symbol, "symbol precision mismatch");
+        eosio::check(quantity.is_valid(), "invalid quantity");
+        eosio::check(quantity.amount > 0, "must issue positive quantity");
+        eosio::check(quantity.symbol == st.symbol, "symbol precision mismatch");
 
         statstable.modify(st, eosio::same_payer, [&](auto &s) {
             s.supply -= quantity;
@@ -605,8 +636,8 @@ CONTRACT gyftietoken : public contract
     {
         gyftrequest_table g_t("gyftmultisig"_n, "gyftmultisig"_n.value);
         auto g_itr = g_t.find(recipient.value);
-        eosio_assert(g_itr != g_t.end(), "No gyft request matching this recipient.");
-        eosio_assert (g_itr->gyfter == gyfter, "Gyft request does not match this gyfter.");
+        eosio::check(g_itr != g_t.end(), "No gyft request matching this recipient.");
+        eosio::check (g_itr->gyfter == gyfter, "Gyft request does not match this gyfter.");
 
         // New account resources
         asset ram = asset(3000, network_symbol); // 0.3
@@ -709,13 +740,21 @@ CONTRACT gyftietoken : public contract
 
     float get_usercount_factor ()
     {
-        uint16_t usercount_baseline = 195;
-        counter_table counter(get_self(), get_self().value);
-        auto c = counter.get();
-        float percent_increase_user_count = (float) (c.account_count - usercount_baseline) / (float) usercount_baseline;
+        state_table state = state_table (get_self(), get_self().value);
+        auto s = state.get();
+        
+        float increase_since_last_step = (float) (s.user_count - s.prior_step_user_count) / (float) s.prior_step_user_count;
+        // print (" Increase since last step: ", std::to_string(increase_since_last_step), "\n");
 
-        float double_decrease = -1 * 2 * percent_increase_user_count;
-        return double_decrease;
+        if (increase_since_last_step >= (float) s.pol_scaled_step_increase / SCALER) {
+            float decay_percentage = (float) 1.00000000  - ( (float) s.pol_scaled_user_count_decay / (float) SCALER);
+            // print (" Decay percentage: ", std::to_string(decay_percentage), "\n");
+            s.scaled_user_count_factor *= (float) (decay_percentage);
+            s.prior_step_user_count = s.user_count;
+            state.set (s, get_self());
+        }
+
+        return (float) s.scaled_user_count_factor / (float) SCALER;
     }
 
     asset get_one_gft()
@@ -727,7 +766,9 @@ CONTRACT gyftietoken : public contract
     asset get_recipient_reward ()
     {
         //print (" \nDecrease recipient reward by : ", get_usercount_factor(), "\n");
-        return get_one_gft();
+
+        return adjust_asset (get_one_gft(), get_usercount_factor());
+        //return get_one_gft();
     }
 
     asset get_gyfter_reward (name gyfter)
@@ -766,6 +807,6 @@ CONTRACT gyftietoken : public contract
             gyft_benefit_amount = one_gyftie_token * 20;
         }
 
-        return gyft_benefit_amount;
+        return adjust_asset (gyft_benefit_amount, get_usercount_factor());
     }
 };

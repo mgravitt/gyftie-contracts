@@ -225,8 +225,9 @@ CONTRACT gftorderbook : public contract
 
     TABLE account
     {
-        asset   balance;
-        string  idhash;
+        asset balance;
+        // DEPLOY
+        // string idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index<"accounts"_n, account> accounts;
@@ -238,6 +239,10 @@ CONTRACT gftorderbook : public contract
         uint16_t    rating_count;
         string      idhash;
         string      id_expiration;
+
+        // DEPLOY
+        asset       gft_balance;
+        asset       staked_balance;
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;

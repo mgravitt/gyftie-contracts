@@ -486,6 +486,8 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
 {
     config_table config (get_self(), get_self().value);
     auto c = config.get();
+
+    print (" \n\nLimit sell gft\n");
     
     eosio_assert (  has_auth (seller) || 
                     has_auth (get_self()) ||
@@ -494,6 +496,7 @@ ACTION gftorderbook::limitsellgft (name seller, asset price_per_gft, asset gft_a
     eosio_assert ( is_gyftie_account (seller), "Seller is not a gyftie account." );
     eosio_assert (!is_paused(), "Contract is paused - no actions allowed.");
 
+    print (" Adding limit sell order\n");
     add_limitsell_order (seller, price_per_gft, gft_amount);
   
     processbook ();
