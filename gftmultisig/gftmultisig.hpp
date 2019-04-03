@@ -1,7 +1,7 @@
 
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
 #include <string>
 
 using std::string;
@@ -23,12 +23,18 @@ CONTRACT gftmultisig : public contract
 
     ACTION delproposal (const uint64_t proposal_id);
 
+    ACTION clrproposals ();
+
+    ACTION clnrequests ();
+
     ACTION addrequest (const name gyfter,
                         const name recipient,
                         const string owner_public_key,
                         const string active_public_key) ;
 
     ACTION delrequest (const name recipient);
+
+    ACTION remrequest (const name recipient);
     
   private:
 

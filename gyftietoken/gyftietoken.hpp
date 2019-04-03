@@ -6,12 +6,15 @@
 #include <string>
 #include <algorithm> // std::find
 #include <eosio/singleton.hpp>
+#include <eosio/transaction.hpp>
+//#include <eosio/chain/authority.hpp>
 #include <math.h>
 
 #include "includes/abieos_numeric.hpp"
 
 using std::string;
 using std::vector;
+using std::tie;
 using namespace eosio;
 
 CONTRACT gyftietoken : public contract
@@ -19,16 +22,12 @@ CONTRACT gyftietoken : public contract
     using contract::contract;
 
   public:
-    // ACTION copybal1();
-    // ACTION remaccounts();
-    // ACTION repopaccts();
-    ACTION remtemp();
+    // ACTION copygyfts1();
+    // ACTION copygyfts2();
+    // ACTION deloriggyfts();
+    ACTION chgthrottle(const uint32_t throttle);
 
-    // ACTION miggyftss1();
-
-    // ACTION miggyftss2(); 
-
-    // ACTION setcount (uint32_t count);
+    // ACTION upperm();
 
     ACTION setconfig(const name token_gen, const name gftorderbook, const name gyftie_foundation);
 
@@ -39,21 +38,18 @@ CONTRACT gyftietoken : public contract
                                 const uint32_t pol_user_count_decayx100,  // 2%
                                 const uint32_t pol_step_increasex100); 
 
-    ACTION printufact();
-
     ACTION addrating(const name rater, const name ratee, const uint8_t rating);
 
     ACTION create();
 
-    // ACTION crprof();
-
     ACTION issue(const name to, const asset quantity, const string memo);
+    ACTION issuetostake (const name to, const asset quantity, const string memo);
 
     ACTION transfer(const name from, const name to, const asset quantity, const string memo);
-    
-    // ACTION stake (name account, asset quantity);
+    ACTION xfertostake(const name from, const name to, const asset quantity, const string memo);
 
-    // ACTION unstake (name account, asset quantity);
+    ACTION requnstake (const name user, const asset quantity);
+    ACTION unstaked (const name user, const asset quantity); 
 
     ACTION calcgyft(name from, name to);
 
@@ -75,17 +71,18 @@ CONTRACT gyftietoken : public contract
 
     ACTION removeprop(const uint64_t proposal_id);
 
-    // ACTION setcounter(const uint64_t account_count);
-
-    // ACTION setvalidator (name account, uint8_t active_validator);
-
     ACTION nchallenge (const name challenger_account, const name challenged_account, const string notes);
 
     ACTION validate (const name validator, const name account, const string idhash, const string id_expiration);
 
-    // ACTION addcidnote (name scribe, uint64_t challenge_id, string note);
+    ACTION dchallenge (const name challenged_account);
 
     ACTION addcnote (const name scribe, const name challenged_account, const string note);
+
+    ACTION addlock (const name account_to_lock);
+    ACTION unlock (const name account_to_unlock);
+    ACTION addsig (const name new_signatory);
+    ACTION remsig (const name existing_signatory);
 
     ACTION pause();
 
@@ -138,6 +135,21 @@ CONTRACT gyftietoken : public contract
     typedef singleton<"states"_n, State> state_table;
     typedef eosio::multi_index<"states"_n, State> state_table_placeholder;
 
+    // TABLE Throttle 
+    // {
+    //     uint64_t    throttle_id;
+    //     uint16_t    allowed_gyfts = 100;
+    //     uint32_t    per_seconds = 100;
+    // };
+
+    TABLE Throttle 
+    {
+        uint32_t throttle = 0;
+    };
+
+    typedef singleton<"throttles"_n, Throttle> throttle_table;
+    typedef eosio::multi_index<"throttles"_n, Throttle> throttle_table_placeholder;
+
     TABLE proposal
     {
         uint64_t proposal_id;
@@ -155,21 +167,33 @@ CONTRACT gyftietoken : public contract
 
     typedef eosio::multi_index<"proposals"_n, proposal> proposal_table;
 
-    TABLE tokengen
-    {
-        name from;
-        name to;
-        asset generated_amount;
-    };
+    // TABLE tokengen
+    // {
+    //     name from;
+    //     name to;
+    //     asset generated_amount;
+    // };
 
-    typedef singleton<"tokengens"_n, tokengen> tokengen_table;
-    typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table_placeholder;
+    // typedef singleton<"tokengens"_n, tokengen> tokengen_table;
+    // typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table_placeholder;
+
+    TABLE lock
+    {
+        name        account;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"locks"_n, lock> lock_table;
+
+    TABLE signatory
+    {
+        name        account;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"signatories"_n, signatory> signatory_table;
 
     TABLE account
     {
         asset balance;
-        // DEPLOY
-        // string idhash;
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
     };
     typedef eosio::multi_index<"accounts"_n, account> accounts;
@@ -181,49 +205,37 @@ CONTRACT gyftietoken : public contract
         uint16_t    rating_count;
         string      idhash;
         string      id_expiration;
-
-        // DEPLOY
         asset       gft_balance;
         asset       staked_balance;
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
 
-    TABLE tprofile
-    {
-        name        account;
-        uint32_t    rating_sum;
-        uint16_t    rating_count;
-        string      idhash;
-        string      id_expiration;
-        asset       gft_balance;
-        uint64_t    primary_key() const { return account.value; }
-    };
-    typedef eosio::multi_index<"tprofiles"_n, tprofile> tprofile_table;
+    // TABLE tprofile
+    // {
+    //     name        account;
+    //     uint32_t    rating_sum;
+    //     uint16_t    rating_count;
+    //     string      idhash;
+    //     string      id_expiration;
+    //     asset       gft_balance;
+    //     uint64_t    primary_key() const { return account.value; }
+    // };
+    // typedef eosio::multi_index<"tprofiles"_n, tprofile> tprofile_table;
 
     TABLE challenge 
     {
-        //uint64_t        challenge_id;
         name            challenged_account;
         name            challenger_account;
-       // name            validator_account;
         vector<string>  challenge_notes;
         asset           challenge_stake;
         uint32_t        challenged_time;
-       // uint32_t        validated_time;
-       // uint8_t         status;        
-      //  uint64_t        primary_key() const { return challenge_id; }
         uint64_t        primary_key () const { return challenged_account.value; }
         uint64_t        by_challenger() const { return challenger_account.value; }
-        //uint64_t        by_validator() const { return validator_account.value; }
     };
     typedef eosio::multi_index<"challenges"_n, challenge,
-        // indexed_by<"bychallenged"_n,
-        //     const_mem_fun<challenge, uint64_t, &challenge::by_challenged>>,
         indexed_by<"bychallenger"_n,
             const_mem_fun<challenge, uint64_t, &challenge::by_challenger>>
-        // indexed_by<"byvalidator"_n, 
-        //     const_mem_fun<challenge, uint64_t, &challenge::by_validator>>
     > challenge_table;
 
     TABLE availrating
@@ -248,16 +260,18 @@ CONTRACT gyftietoken : public contract
         uint64_t    primary_key() const { return gyft_id; }
         uint64_t    by_gyfter() const { return gyfter.value; }
         uint64_t    by_gyftee() const { return gyftee.value; }
+        uint64_t    by_gyftdate() const { return gyft_date; }
     };
 
-    typedef eosio::multi_index<"gyfts"_n, gyftevent
-    ,
-                               indexed_by<"bygyfter"_n,
-                                   const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyfter>>,
-                               indexed_by<"bygyftee"_n,
-                                   const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyftee>>
-                               >
-        gyft_table;
+    typedef eosio::multi_index<"gyfts"_n, gyftevent,
+        indexed_by<"bygyfter"_n,
+            const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyfter>>,
+        indexed_by<"bygyftee"_n,
+            const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyftee>>,
+        indexed_by<"bygyftdate"_n, 
+            const_mem_fun<gyftevent, uint64_t, &gyftevent::by_gyftdate>>
+        >
+    gyft_table;
 
     // TABLE tgyftevent
     // {
@@ -364,8 +378,8 @@ CONTRACT gyftietoken : public contract
         std::vector<wait_weight> waits;
     };
 
-    void sub_balance(name owner, asset value);
-    void add_balance(name owner, asset value, name ram_payer);
+    // void sub_balance(name owner, asset value);
+    // void add_balance(name owner, asset value, name ram_payer);
 
     authority keystring_authority(string key_str)
     {
@@ -392,6 +406,46 @@ CONTRACT gyftietoken : public contract
         ret_authority.waits = {};
 
         return ret_authority;
+    }
+
+    void require_any_signatory () 
+    {
+        bool signed_by_signatory = false;
+        signatory_table s_t (get_self(), get_self().value);
+        auto s_itr = s_t.begin();
+
+        while (!signed_by_signatory && s_itr != s_t.end()) {
+            signed_by_signatory = has_auth (s_itr->account);
+            s_itr++;
+        }
+
+        eosio::check (signed_by_signatory, "Transaction requires the approval of a signatory.");
+    }
+
+    void throttle_gyfts () 
+    {
+        throttle_table t_t (get_self(), get_self().value);
+        Throttle t = t_t.get_or_create(get_self(), Throttle());
+
+        state_table state (get_self(), get_self().value);
+        auto s = state.get();
+        
+        if (t.throttle < s.user_count && t.throttle > 0) {
+            gyft_table g_t (get_self(), get_self().value);
+            auto gyftdate_index = g_t.get_index<"bygyftdate"_n>();
+            auto gyftdate_itr = gyftdate_index.rbegin();
+
+            for (int i=0; i< t.throttle; i++) {
+                gyftdate_itr++;
+            }
+
+            uint32_t throttled_gyfts_ago = gyftdate_itr->gyft_date;
+            uint32_t throttled_time_period = 60 * 60 * 24; // 24 hours
+            eosio::check (  throttled_gyfts_ago < 
+                                current_block_time().to_time_point().sec_since_epoch() - 
+                                throttled_time_period, 
+                            "Gyfts are throttled. Please wait a few hours and try again.");
+        }
     }
 
     void paytoken(const name token_contract,
@@ -427,35 +481,34 @@ CONTRACT gyftietoken : public contract
             g.gyfter_issue = gyfter_issue;
             g.gyftee_issue = gyftee_issue;
             g.relationship = relationship;
-            // g.notes = notes;
             g.gyft_date = current_block_time().to_time_point().sec_since_epoch();
         });
     }
 
     void stake (name account, asset quantity) 
     {
-        sub_balance (account, quantity);
+        //sub_balance (account, quantity);
 
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
         eosio::check (p_itr != p_t.end(), "Account profile not found.");
 
         p_t.modify (p_itr, get_self(), [&](auto &p) {
-            // DEPLOY
+            p.gft_balance -= quantity;
             p.staked_balance += quantity;
         });
     }
 
     void unstake (name account, asset quantity) 
     {
-        add_balance (account, quantity, get_self());
+        //add_balance (account, quantity, get_self());
 
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
         eosio::check (p_itr != p_t.end(), "Account profile not found.");
 
         p_t.modify (p_itr, get_self(), [&](auto &p) {
-            // DEPLOY
+            p.gft_balance += quantity;
             p.staked_balance -= quantity;
         });
     }
@@ -468,6 +521,12 @@ CONTRACT gyftietoken : public contract
     void permit_account (name account)
     {
         eosio::check ( is_gyftie_account (account), "Account is not a GFT token holder.");
+
+        lock_table l_t (get_self(), get_self().value);
+        auto l_itr = l_t.begin();
+        while (l_itr != l_t.end()) {
+            eosio::check (l_itr->account != account, "Account has been locked out of Gyftie activities.");    
+        }
 
         challenge_table c_t (get_self(), get_self().value);
         auto c_itr = c_t.find(account.value);
@@ -563,7 +622,6 @@ CONTRACT gyftietoken : public contract
             p.rating_sum = 0;
             p.idhash = idhash;
             p.id_expiration = id_expiration;
-            //DEPLOY
             p.gft_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
             p.staked_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
         });
@@ -575,11 +633,6 @@ CONTRACT gyftietoken : public contract
         auto s = state.get();
         s.user_count++;
         state.set (s, get_self());
-
-        // counter_table counter(get_self(), get_self().value);
-        // auto c = counter.get();
-        // c.account_count++;
-        // counter.set(c, get_self());
     }
 
     void burn(name account, asset quantity)
@@ -605,16 +658,9 @@ CONTRACT gyftietoken : public contract
         symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
         asset gft_balance = asset{0, sym};
 
-        // accounts a_t(get_self(), account.value);
-        // auto a_itr = a_t.find(sym.code().raw());
-        // if (a_itr != a_t.end())
-        // {
-        //     gft_balance += a_itr->balance;
-        // }
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
         if (p_itr != p_t.end()) {
-            // DEPLOY
             gft_balance += p_itr->gft_balance;
             gft_balance += p_itr->staked_balance;
         }
@@ -686,6 +732,12 @@ CONTRACT gyftietoken : public contract
             std::make_tuple(get_self(), reimbursement))
         .send();   
 
+        // action (
+        //     permission_level{get_self(), "owner"_n},
+        //     "gftmultisig"_n, "remrequest"_n,
+        //     std::make_tuple(recipient))
+        // .send();   
+
         return reimbursement;
     }
 
@@ -744,11 +796,9 @@ CONTRACT gyftietoken : public contract
         auto s = state.get();
         
         float increase_since_last_step = (float) (s.user_count - s.prior_step_user_count) / (float) s.prior_step_user_count;
-        // print (" Increase since last step: ", std::to_string(increase_since_last_step), "\n");
 
         if (increase_since_last_step >= (float) s.pol_scaled_step_increase / SCALER) {
             float decay_percentage = (float) 1.00000000  - ( (float) s.pol_scaled_user_count_decay / (float) SCALER);
-            // print (" Decay percentage: ", std::to_string(decay_percentage), "\n");
             s.scaled_user_count_factor *= (float) (decay_percentage);
             s.prior_step_user_count = s.user_count;
             state.set (s, get_self());
@@ -765,20 +815,14 @@ CONTRACT gyftietoken : public contract
 
     asset get_recipient_reward ()
     {
-        //print (" \nDecrease recipient reward by : ", get_usercount_factor(), "\n");
-
         return adjust_asset (get_one_gft(), get_usercount_factor());
-        //return get_one_gft();
     }
 
     asset get_gyfter_reward (name gyfter)
     {
-        //print (" \nDecrease gyfter reward by : ", get_usercount_factor(), "\n");
-
         asset one_gyftie_token = get_one_gft();
         asset gyfter_gft_balance = getgftbalance (gyfter);
 
-        //double gyft_benefit= 0.0;
         asset gyft_benefit_amount = one_gyftie_token;
 
         if (gyfter_gft_balance  <= (one_gyftie_token * 3)) {
@@ -809,4 +853,77 @@ CONTRACT gyftietoken : public contract
 
         return adjust_asset (gyft_benefit_amount, get_usercount_factor());
     }
+
+    void defer_unstake (const name user, const asset quantity, const uint32_t delay) 
+    {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+            get_self(), "unstaked"_n, 
+            std::make_tuple(user, quantity));
+        out.delay_sec = delay;
+        out.send(current_block_time().to_time_point().sec_since_epoch() + user.value + delay, get_self());    
+     }
+
+    void sub_balance(const name owner, const asset value)
+    {
+        accounts from_acnts(_self, owner.value);
+
+        const auto &from = from_acnts.get(value.symbol.code().raw(), "no balance object found");
+        eosio::check(from.balance.amount >= value.amount, "overdrawn balance");
+
+        auto sym_name = value.symbol.code().raw();
+        stats statstable(_self, sym_name);
+        auto existing = statstable.find(sym_name);
+        eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+        const auto &st = *existing;
+
+        from_acnts.modify(from, get_self(), [&](auto &a) {
+            a.balance -= value;
+        });
+
+        profile_table p_t (get_self(), get_self().value);
+        auto p_itr = p_t.find (owner.value);
+        eosio::check (p_itr != p_t.end(), "Account not found.");
+        eosio::check (p_itr->gft_balance >= value, "overdrawn balance - GFT is staked");
+
+        p_t.modify (p_itr, get_self(), [&](auto &p) {
+            p.gft_balance -= value;
+        });
+    }
+
+    void add_balance(const name owner, const asset value, const name ram_payer)
+    {
+        accounts to_acnts(_self, owner.value);
+        auto to = to_acnts.find(value.symbol.code().raw());
+        if (to == to_acnts.end())
+        {
+            auto sym_name = value.symbol.code().raw();
+            stats statstable(_self, sym_name);
+            auto existing = statstable.find(sym_name);
+            eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+            const auto &st = *existing;
+
+            if (owner != st.issuer) {  // do not increment account count for issuer
+                increment_account_count ();
+            }
+            to_acnts.emplace(ram_payer, [&](auto &a) {
+                a.balance = value;
+            });
+        }
+        else
+        {
+            to_acnts.modify(to, eosio::same_payer, [&](auto &a) {
+                a.balance += value;
+            });
+        }
+        profile_table p_t (get_self(), get_self().value);
+        auto p_itr = p_t.find (owner.value);
+        eosio::check (p_itr != p_t.end(), "Account not found.");
+
+        p_t.modify (p_itr, get_self(), [&](auto &p) {
+            p.gft_balance += value;
+        });
+    }
+
+
 };
