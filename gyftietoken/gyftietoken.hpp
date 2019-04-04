@@ -526,6 +526,7 @@ CONTRACT gyftietoken : public contract
         auto l_itr = l_t.begin();
         while (l_itr != l_t.end()) {
             eosio::check (l_itr->account != account, "Account has been locked out of Gyftie activities.");    
+            l_itr++;
         }
 
         challenge_table c_t (get_self(), get_self().value);
