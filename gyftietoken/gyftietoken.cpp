@@ -770,20 +770,20 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
 
     asset remaining_stake = quantity;
-   
-    defer_unstake(user, adjust_asset (quantity, 0.200000000), 5);
-    remaining_stake -= adjust_asset (quantity, 0.200000000);
 
-    defer_unstake(user, adjust_asset (quantity, 0.200000000), 10);
-    remaining_stake -= adjust_asset (quantity, 0.200000000);
+    uint32_t    delay_increment = 60 * 60 * 24;  // one day
+    uint32_t    delay = delay_increment;
+    float       stake_increment = 0.05000000000;
 
-    defer_unstake(user, adjust_asset (quantity, 0.200000000), 15);
-    remaining_stake -= adjust_asset (quantity, 0.200000000);
+    while (remaining_stake.amount > 0) {
+        asset current_stake = asset {std::min(remaining_stake.amount, 
+                                              adjust_asset (quantity, stake_increment).amount),
+                                     remaining_stake.symbol};
 
-    defer_unstake(user, adjust_asset (quantity, 0.200000000), 20);
-    remaining_stake -= adjust_asset (quantity, 0.200000000);
-
-    defer_unstake(user, remaining_stake, 25);
+        defer_unstake(user, current_stake, delay);
+        delay += delay_increment;
+        remaining_stake -= current_stake;
+    }
 }
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft) //(copygyfts1)(copygyfts2)(deloriggyfts)

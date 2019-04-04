@@ -88,8 +88,10 @@ ACTION gftmultisig::clrproposals ()
     auto p_itr = p_t.begin();
     
     while ( p_itr != p_t.end()) {
-        delproposal (p_itr->proposal_id);
-        p_itr++;
+        eosio::check (  has_auth (get_self()) || 
+                    has_auth(p_itr->proposer), "Permission to delete proposal denied.");
+
+        p_itr = p_t.erase (p_itr);
     }
 }
 
