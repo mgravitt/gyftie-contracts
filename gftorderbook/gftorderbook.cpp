@@ -694,7 +694,8 @@ ACTION gftorderbook::delbuyorder (uint64_t buyorder_id)
     auto b_itr = b_t.find (buyorder_id);
     eosio::check (b_itr != b_t.end(), "Buy Order ID does not exist.");
 
-    require_auth (b_itr->buyer);
+    eosio::check (  has_auth (b_itr->buyer) || 
+                    has_auth (get_self()), "Permission denied.");
 
     config_table config (get_self(), get_self().value);
     auto c = config.get();
@@ -836,7 +837,7 @@ extern "C" {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)(defbuckets)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)(stackbuyrec)(compilestate)
-                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)(addliqreward)
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)(addliqreward)(payrewards)
                                                     (setrewconfig)(addbucket)(buildbucket)(buildbuckets)(payliqinfrew)(payrewbucket)(payrewbucks))
             }    
         }
