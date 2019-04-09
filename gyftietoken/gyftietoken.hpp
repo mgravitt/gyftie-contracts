@@ -47,7 +47,7 @@ CONTRACT gyftietoken : public contract
 
     ACTION transfer(const name from, const name to, const asset quantity, const string memo);
     ACTION xfertostake(const name from, const name to, const asset quantity, const string memo);
-
+    
     ACTION requnstake (const name user, const asset quantity);
     ACTION unstaked (const name user, const asset quantity); 
 
@@ -716,6 +716,8 @@ CONTRACT gyftietoken : public contract
             .send();
 
         asset reimbursement = get_market_gft_requirement (ram + cpu + net);
+        eosio::check (reimbursement <= get_gyfter_reward(gyfter), "Cost of creating account is not covered by Gyft reward.");
+        
         string market_sell_for_reimbursement { "Market Sell for Account Creation Reimbursement"};
 
         config_table config(get_self(), get_self().value);

@@ -767,7 +767,18 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     auto p_itr = p_t.find (user.value);
     eosio::check (p_itr != p_t.end(), "Account profile not found.");
 
+    challenge_table c_t (get_self(), get_self().value);
+    auto challenger_index = c_t.get_index<"bychallenger"_n>();
+    auto challenger_itr = challenger_index.begin();
+
+    asset challenged_balance = asset {0, quantity.symbol};
+    while (challenger_itr->challenger_account == user && challenger_itr != challenger_index.end()) {
+        challenged_balance += challenger_itr->challenge_stake;
+        challenger_itr++;
+    }
+
     eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
+    eosio::check (p_itr->staked_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
 
     asset remaining_stake = quantity;
 
