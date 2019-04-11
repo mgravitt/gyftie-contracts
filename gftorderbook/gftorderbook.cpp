@@ -240,7 +240,7 @@ ACTION gftorderbook::payliqinfrew ()
 
     state_table state (get_self(), get_self().value);
     State s = state.get();
-    asset total_liquidity = s.sell_orderbook_size_gft + s.buy_orderbook_size_gft;
+    asset total_liquidity = s.buy_orderbook_size_gft; //s.sell_orderbook_size_gft + ;
 
     rewardconfig_table rewardconfig (get_self(), get_self().value);
     Rewardconfig r = rewardconfig.get();
@@ -248,6 +248,7 @@ ACTION gftorderbook::payliqinfrew ()
     liqreward_table l_t (get_self(), get_self().value);
     Liqreward l = l_t.get();
     asset liquidity_reward = l.availreward;
+    print (" Distributing liquidity reward: ", liquidity_reward, "\n");
 
     int bucket_counter =0;
     ob_itr = ob_t.begin();
@@ -260,7 +261,7 @@ ACTION gftorderbook::payliqinfrew ()
                                     ( (float) bucket_size_weight * ( (float) r.bucket_size_weight_scaled / (float) SCALER));
                     
             asset bucket_reward = adjust_asset (liquidity_reward, overall_weight);
-
+            
             add_bucket_reward (ob_itr->bucket_id, bucket_reward);
         }
 
@@ -343,26 +344,26 @@ ACTION gftorderbook::buildbucket (uint64_t bucket_id)
     eosio::check (ob_itr != ob_t.end(), "Bucket ID is not found.");
 
     asset last_price = get_last_price();
-    asset bucket_minimum_sell = last_price + adjust_asset (last_price, (float) ob_itr->prox_bucket_min_scaled / SCALER);
-    asset bucket_maximum_sell = last_price + adjust_asset (last_price, (float) ob_itr->prox_bucket_max_scaled / SCALER);
+    // asset bucket_minimum_sell = last_price + adjust_asset (last_price, (float) ob_itr->prox_bucket_min_scaled / SCALER);
+    // asset bucket_maximum_sell = last_price + adjust_asset (last_price, (float) ob_itr->prox_bucket_max_scaled / SCALER);
 
     asset bucket_size = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
     clr_bucketuser (bucket_id);
 
-    sellorder_table s_t (get_self(), get_self().value);
-    auto s_index = s_t.get_index<"byprice"_n>();
-    auto s_itr = s_index.begin ();
+    // sellorder_table s_t (get_self(), get_self().value);
+    // auto s_index = s_t.get_index<"byprice"_n>();
+    // auto s_itr = s_index.begin ();
 
-    // fast forward cursor to beg of bucket in sell order book
-    while (s_itr != s_index.end() && s_itr->price_per_gft < bucket_minimum_sell) {
-        s_itr++;
-    }
+    // // fast forward cursor to beg of bucket in sell order book
+    // while (s_itr != s_index.end() && s_itr->price_per_gft < bucket_minimum_sell) {
+    //     s_itr++;
+    // }
 
-    while (s_itr != s_index.end() && s_itr->price_per_gft < bucket_maximum_sell) {
-        bucket_size += s_itr->gft_amount;
-        add_bucketuser (bucket_id, s_itr->seller, s_itr->gft_amount);
-        s_itr++;
-    }
+    // while (s_itr != s_index.end() && s_itr->price_per_gft < bucket_maximum_sell) {
+    //     bucket_size += s_itr->gft_amount;
+    //     add_bucketuser (bucket_id, s_itr->seller, s_itr->gft_amount);
+    //     s_itr++;
+    // }
 
     asset bucket_maximum_buy = asset { std::max(  (last_price - adjust_asset (last_price, (float) ob_itr->prox_bucket_min_scaled / SCALER)).amount, (int64_t) 0), last_price.symbol};
     asset bucket_minimum_buy = asset { std::max(  (last_price - adjust_asset (last_price, (float) ob_itr->prox_bucket_max_scaled / SCALER)).amount, (int64_t) 0), last_price.symbol};
@@ -386,8 +387,8 @@ ACTION gftorderbook::buildbucket (uint64_t bucket_id)
 
     ob_t.modify (ob_itr, get_self(), [&](auto &ob) {
         ob.bucket_size = bucket_size;
-        ob.bucket_minimum_sell = bucket_minimum_sell;
-        ob.bucket_maximum_sell = bucket_maximum_sell;
+        ob.bucket_minimum_sell = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};;
+        ob.bucket_maximum_sell = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};;
         ob.bucket_minimum_buy = bucket_minimum_buy;
         ob.bucket_maximum_buy = bucket_maximum_buy;
     });
@@ -702,6 +703,7 @@ ACTION gftorderbook::delbuyorder (uint64_t buyorder_id)
 
     sendfrombal (c.valid_counter_token_contract, b_itr->buyer, b_itr->buyer, b_itr->order_value, "Cancelled Buy Order");
 
+    decrease_buygft_liquidity (b_itr->gft_amount);
     b_t.erase (b_itr);
     //buildbuckets_deferred();
 }
@@ -720,8 +722,33 @@ ACTION gftorderbook::delsellorder (uint64_t sellorder_id)
 
     sendfrombal (c.gyftiecontract, s_itr->seller, s_itr->seller, s_itr->gft_amount, "Cancelled Sell Order");
 
+    decrease_sellgft_liquidity (s_itr->gft_amount);
     s_t.erase (s_itr);
     //buildbuckets_deferred();
+}
+
+ACTION gftorderbook::delsordersv (vector<uint64_t> sellorder_ids) 
+{
+    for(std::vector<uint64_t>::iterator it = sellorder_ids.begin(); it != sellorder_ids.end(); ++it) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "delsellorder"_n, 
+                                std::make_tuple(*it));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());        
+    }
+}
+
+ACTION gftorderbook::delbordersv (vector<uint64_t> buyorder_ids) 
+{
+    for(std::vector<uint64_t>::iterator it = buyorder_ids.begin(); it != buyorder_ids.end(); ++it) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "delbuyorder"_n, 
+                                std::make_tuple(*it));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());        
+    }
 }
 
 ACTION gftorderbook::delsorders (uint64_t low_sellorder_id, uint64_t high_sellorder_id)
@@ -835,7 +862,7 @@ extern "C" {
         }
         if (code == receiver) {
             switch (action) { 
-                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)(defbuckets)
+                EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)(defbuckets)(delbordersv)(delsordersv)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)(stackbuyrec)(compilestate)
                                                     (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)(addliqreward)(payrewards)
                                                     (setrewconfig)(addbucket)(buildbucket)(buildbuckets)(payliqinfrew)(payrewbucket)(payrewbucks))

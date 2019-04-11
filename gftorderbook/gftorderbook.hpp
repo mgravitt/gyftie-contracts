@@ -86,13 +86,13 @@ CONTRACT gftorderbook : public contract
 
    ACTION delbuyorder (uint64_t buyorder_id);
    
-    // ACTION delbordersv (vector<uint64_t> buyorder_ids);
+   ACTION delbordersv (vector<uint64_t> buyorder_ids);
 
    ACTION delsellorder (uint64_t sellorder_id);
 
    ACTION delsorders (uint64_t low_sellorder_id, uint64_t high_sellorder_id);
 
-//    ACTION delsordersv (vector<uint64_t> sellorder_ids);
+   ACTION delsordersv (vector<uint64_t> sellorder_ids);
 
    ACTION admindelbo (uint64_t buyorder_id);
 

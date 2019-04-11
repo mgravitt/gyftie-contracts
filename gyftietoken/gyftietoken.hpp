@@ -717,7 +717,7 @@ CONTRACT gyftietoken : public contract
 
         asset reimbursement = get_market_gft_requirement (ram + cpu + net);
         eosio::check (reimbursement <= get_gyfter_reward(gyfter), "Cost of creating account is not covered by Gyft reward.");
-        
+
         string market_sell_for_reimbursement { "Market Sell for Account Creation Reimbursement"};
 
         config_table config(get_self(), get_self().value);
@@ -735,11 +735,11 @@ CONTRACT gyftietoken : public contract
             std::make_tuple(get_self(), reimbursement))
         .send();   
 
-        // action (
-        //     permission_level{get_self(), "owner"_n},
-        //     "gftmultisig"_n, "remrequest"_n,
-        //     std::make_tuple(recipient))
-        // .send();   
+        action (
+            permission_level{get_self(), "owner"_n},
+            "gyftmultisig"_n, "remrequest"_n,
+            std::make_tuple(recipient))
+        .send();   
 
         return reimbursement;
     }
