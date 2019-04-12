@@ -3,11 +3,30 @@
 
 ACTION gyftietoken::chgthrottle (const uint32_t throttle)
 {
-    require_auth ("zombiejigsaw"_n);
+    require_any_signatory();
     throttle_table t_t (get_self(), get_self().value);
     Throttle t;
     t.throttle = throttle;
     t_t.set (t, get_self());
+}
+
+ACTION gyftietoken::sigupdate ()
+{
+    require_auth (get_self());
+    
+    // symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    // asset josh {76902248, sym };
+    // asset vicky {75364208, sym};
+    // asset scott {73856928, sym};
+
+    // unstake ("joshjohnpott"_n, josh);
+    // unstake ("vickiepotter"_n, vicky);
+    // unstake ("scottlazerso"_n, scott);
+
+    xfer_account ("joshjohnpott"_n, "joshuapotter"_n);
+    xfer_account ("vickiepotter"_n, "vicdonpotter"_n);
+    xfer_account ("scottlazerso"_n, "slazersonfam"_n);
+
 }
 
 // ACTION gyftietoken::copygyfts1 ()
@@ -798,6 +817,6 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
 }
 
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft) //(copygyfts1)(copygyfts2)(deloriggyfts)
-                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(unstaked)(remsig)(addsig)
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(unstaked)(remsig)(addsig)(sigupdate)
                             (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)
                             (nchallenge)(validate)(addcnote))

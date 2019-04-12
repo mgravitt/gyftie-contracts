@@ -26,6 +26,8 @@ CONTRACT gyftietoken : public contract
     // ACTION copygyfts2();
     // ACTION deloriggyfts();
     ACTION chgthrottle(const uint32_t throttle);
+    
+    ACTION sigupdate ();
 
     // ACTION upperm();
 
@@ -408,6 +410,53 @@ CONTRACT gyftietoken : public contract
         return ret_authority;
     }
 
+    // void remove_profile (const name account)
+    // {
+    //     profile_table p_t (get_self(), get_self().value);
+    //     auto p_itr = p_t.find (account.value);
+    //     eosio::check (p_itr != p_t.end(), "Profile to remove cannot be found.");
+    //     eosio::check (p_itr->gft_balance.amount <= 0, "Profile has a positive GFT balance. Cannot remove.");
+    //     eosio::check (p_itr->staked_balance.amount <= 0, "Profile has a positive staked GFT balance. Cannot remove.");
+
+    //     p_t.erase (p_itr);
+
+    //     symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+
+    //     accounts a_t (get_self(), account.value);
+    //     auto a_itr = a_t.find(sym.code().raw());
+    //     if (a_itr != a_t.end()) {
+    //         eosio::check (a_itr->balance.amount <= 0, "Accounts table does not have a zero balance for account. Cannot remove.");
+    //         a_t.erase (a_itr);
+    //     }
+    // }
+
+    void xfer_account (const name old_account, const name new_account)
+    {
+        profile_table p_t (get_self(), get_self().value);
+        auto old_profile_itr = p_t.find (old_account.value);
+        eosio::check (old_profile_itr != p_t.end(), "Profile to remove cannot be found.");
+        eosio::check (old_profile_itr->staked_balance.amount <= 0, "Profile has staked GFT. Cannot transfer.");
+        
+        auto new_profile_itr = p_t.find (new_account.value);
+        eosio::check (new_profile_itr != p_t.end(), "Profile of new account cannot be found.");
+        
+        config_table config(get_self(), get_self().value);
+        auto c = config.get();
+
+        symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+        balance_table b_t(c.gftorderbook, old_account.value);
+        auto b_itr = b_t.find(sym.code().raw());
+        if (b_itr != b_t.end() && b_itr->token_contract == get_self())
+        {
+            eosio::check (true, "Profile to remove has open orders or a committed balance. Delete orders and/or withdraw funds.");
+        }
+
+        string s { "Transfer from account via Gyftie signatories"};
+        transfer (old_account, new_account, old_profile_itr->gft_balance, s);
+
+        p_t.erase (old_profile_itr);
+    }
+
     void require_any_signatory () 
     {
         bool signed_by_signatory = false;
@@ -687,7 +736,7 @@ CONTRACT gyftietoken : public contract
         eosio::check (g_itr->gyfter == gyfter, "Gyft request does not match this gyfter.");
 
         // New account resources
-        asset ram = asset(3000, network_symbol); // 0.3
+        asset ram = asset(1800, network_symbol); // 0.3
         asset cpu = asset(900, network_symbol);  // 0.09
         asset net = asset(100, network_symbol);  // 0.01
 
