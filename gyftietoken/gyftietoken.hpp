@@ -81,7 +81,10 @@ CONTRACT gyftietoken : public contract
 
     ACTION addcnote (const name scribe, const name challenged_account, const string note);
 
-    ACTION addlock (const name account_to_lock);
+    ACTION addlock (const name account_to_lock, const string note);
+    ACTION addlockchain (const name account_to_lock, const string note );
+    ACTION addlocknote (const name account_to_lock, const string note);
+
     ACTION unlock (const name account_to_unlock);
     ACTION addsig (const name new_signatory);
     ACTION remsig (const name existing_signatory);
@@ -152,6 +155,14 @@ CONTRACT gyftietoken : public contract
     typedef singleton<"throttles"_n, Throttle> throttle_table;
     typedef eosio::multi_index<"throttles"_n, Throttle> throttle_table_placeholder;
 
+    TABLE SenderID
+    {
+        uint64_t    last_sender_id;
+    };
+    typedef singleton<"senderids"_n, SenderID> senderid_table;
+    typedef eosio::multi_index<"senderids"_n, SenderID> senderid_table_placeholder;
+   
+
     TABLE proposal
     {
         uint64_t proposal_id;
@@ -181,7 +192,8 @@ CONTRACT gyftietoken : public contract
 
     TABLE lock
     {
-        name        account;
+        name            account;
+        vector<string>  lock_notes;
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"locks"_n, lock> lock_table;
@@ -430,6 +442,17 @@ CONTRACT gyftietoken : public contract
     //     }
     // }
 
+    uint64_t get_next_sender_id()
+    {
+        senderid_table sid (get_self(), get_self().value);
+        SenderID s = sid.get_or_create(get_self(), SenderID());
+        uint64_t return_senderid = s.last_sender_id;
+        return_senderid++;
+        s.last_sender_id = return_senderid;
+        sid.set (s, get_self());
+        return return_senderid;
+    }
+
     void xfer_account (const name old_account, const name new_account)
     {
         profile_table p_t (get_self(), get_self().value);
@@ -459,6 +482,10 @@ CONTRACT gyftietoken : public contract
 
     void require_any_signatory () 
     {
+        if (has_auth (get_self())) {
+            return;
+        }
+
         bool signed_by_signatory = false;
         signatory_table s_t (get_self(), get_self().value);
         auto s_itr = s_t.begin();
@@ -496,6 +523,8 @@ CONTRACT gyftietoken : public contract
                             "Gyfts are throttled. Please wait a few hours and try again.");
         }
     }
+
+
 
     void paytoken(const name token_contract,
                   const name from,
@@ -736,7 +765,7 @@ CONTRACT gyftietoken : public contract
         eosio::check (g_itr->gyfter == gyfter, "Gyft request does not match this gyfter.");
 
         // New account resources
-        asset ram = asset(1800, network_symbol); // 0.3
+        asset ram = asset(2200, network_symbol); // 0.3
         asset cpu = asset(900, network_symbol);  // 0.09
         asset net = asset(100, network_symbol);  // 0.01
 

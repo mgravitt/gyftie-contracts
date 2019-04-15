@@ -195,7 +195,7 @@ ACTION gyftietoken::sigupdate ()
     // .send();
 // }
 
-ACTION gyftietoken::addlock (const name account_to_lock) 
+ACTION gyftietoken::addlock (const name account_to_lock, const string note) 
 {
     require_any_signatory();
 
@@ -205,7 +205,45 @@ ACTION gyftietoken::addlock (const name account_to_lock)
 
     l_t.emplace (get_self(), [&](auto &l) {
         l.account = account_to_lock;
+        l.lock_notes.push_back (note);
     });
+}
+
+ACTION gyftietoken::addlocknote (const name account_to_lock, const string note)
+{
+    require_any_signatory();
+    lock_table l_t (get_self(), get_self().value);
+    auto l_itr = l_t.find (account_to_lock.value);
+    eosio::check (l_itr != l_t.end(), "Account is not found.");
+
+    l_t.modify (l_itr, get_self(), [&](auto &l) {
+        l.lock_notes.push_back(note);
+    });
+}
+
+ACTION gyftietoken::addlockchain (const name account_to_lock, const string note)
+{
+    require_any_signatory();
+
+    addlock (account_to_lock, note);
+
+    gyft_table g_t (get_self(), get_self().value);
+    auto gyfter_index = g_t.get_index<"bygyfter"_n>();
+    auto gyfter_itr = gyfter_index.find (account_to_lock.value);
+    if (gyfter_itr == gyfter_index.end()) {
+        return;
+    }
+
+    while (gyfter_itr->gyfter == account_to_lock && gyfter_itr != gyfter_index.end()) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "addlockchain"_n, 
+                                std::make_tuple(gyfter_itr->gyftee, note));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());    
+
+        gyfter_itr++;
+    }
 }
 
 ACTION gyftietoken::unlock (const name account_to_unlock) 
@@ -819,4 +857,4 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
 EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft) //(copygyfts1)(copygyfts2)(deloriggyfts)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(unstaked)(remsig)(addsig)(sigupdate)
                             (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)
-                            (nchallenge)(validate)(addcnote))
+                            (nchallenge)(validate)(addcnote)(addlockchain)(addlocknote))
