@@ -524,8 +524,6 @@ CONTRACT gyftietoken : public contract
         }
     }
 
-
-
     void paytoken(const name token_contract,
                   const name from,
                   const name to,
@@ -601,11 +599,8 @@ CONTRACT gyftietoken : public contract
         eosio::check ( is_gyftie_account (account), "Account is not a GFT token holder.");
 
         lock_table l_t (get_self(), get_self().value);
-        auto l_itr = l_t.begin();
-        while (l_itr != l_t.end()) {
-            eosio::check (l_itr->account != account, "Account has been locked out of Gyftie activities.");    
-            l_itr++;
-        }
+        auto l_itr = l_t.find(account.value);
+        eosio::check (l_itr == l_t.end(), "Account has been locked out of Gyftie activities."); 
 
         challenge_table c_t (get_self(), get_self().value);
         auto c_itr = c_t.find(account.value);

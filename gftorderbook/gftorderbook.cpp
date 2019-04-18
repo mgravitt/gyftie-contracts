@@ -248,7 +248,6 @@ ACTION gftorderbook::payliqinfrew ()
     liqreward_table l_t (get_self(), get_self().value);
     Liqreward l = l_t.get();
     asset liquidity_reward = l.availreward;
-    print (" Distributing liquidity reward: ", liquidity_reward, "\n");
 
     int bucket_counter =0;
     ob_itr = ob_t.begin();

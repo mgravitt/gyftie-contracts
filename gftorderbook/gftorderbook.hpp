@@ -293,10 +293,12 @@ CONTRACT gftorderbook : public contract
         auto rd_itr = rd_t.begin();
 
         while (rd_itr != rd_t.end()) {
-            sendfrombal (c.gyftiecontract, c.gyftiecontract, 
-                        rd_itr->recipient, rd_itr->amount_due, 
-                        "Type 2 financial incentive paid to market makers. See 'How Gyftie Works' document - ask us for link.");
-            rd_itr = rd_t.erase (rd_itr);        
+            if (rd_itr->amount_due.amount > 0) {
+                sendfrombal (c.gyftiecontract, c.gyftiecontract, 
+                            rd_itr->recipient, rd_itr->amount_due, 
+                            "Type 2 financial incentive paid to market makers. See 'How Gyftie Works' document - ask us for link.");
+                rd_itr = rd_t.erase (rd_itr);
+            } 
         }
     }
 
@@ -350,26 +352,28 @@ CONTRACT gftorderbook : public contract
                         const asset token_amount,
                         const string memo) 
     {
-        balance_table bal_table (get_self(), from.value);
-        auto it = bal_table.find(token_amount.symbol.code().raw());
-        eosio::check (it != bal_table.end(), "Sender does not have a balance within the contract." );
-        eosio::check (it->funds >= token_amount, "Insufficient balance.");
+        if (token_amount.amount > 0) {   
+            balance_table bal_table (get_self(), from.value);
+            auto it = bal_table.find(token_amount.symbol.code().raw());
+            eosio::check (it != bal_table.end(), "Sender does not have a balance within the contract." );
+            eosio::check (it->funds >= token_amount, "Insufficient balance.");
 
-        bool remove_record = false;
-        bal_table.modify (it, get_self(), [&](auto &b) {
-            if (b.funds == token_amount) {
-                remove_record = true;
+            bool remove_record = false;
+            bal_table.modify (it, get_self(), [&](auto &b) {
+                if (b.funds == token_amount) {
+                    remove_record = true;
+                }
+                b.funds -= token_amount;
+            });
+
+            require_recipient (from);
+
+            paytoken (token_contract, get_self(), to, token_amount, memo);     
+                
+            if (remove_record) {
+                bal_table.erase (it);
             }
-            b.funds -= token_amount;
-        });
-
-        require_recipient (from);
-
-        paytoken (token_contract, get_self(), to, token_amount, memo);                
-
-        if (remove_record) {
-            bal_table.erase (it);
-        }
+        }  
     }
 
     void paytoken(  const name  token_contract,
@@ -484,7 +488,7 @@ CONTRACT gftorderbook : public contract
         return b_itr->funds - open_balance;
     }
 
-     void confirm_balance (name account, asset min_balance) 
+    void confirm_balance (name account, asset min_balance) 
     {
         eosio::check (get_available_balance(account, min_balance.symbol) >= min_balance, "Insufficient funds.");
     }
@@ -768,7 +772,9 @@ CONTRACT gftorderbook : public contract
     asset get_eos_order_value (asset price_per_gft, asset gft_amount) 
     {
         // uint64_t gft_quantity = gft_amount.amount; 
-        return price_per_gft * gft_amount.amount / pow(10,GYFTIE_PRECISION);
+        asset order_value = price_per_gft * gft_amount.amount / pow(10,GYFTIE_PRECISION);
+        eosio::check (order_value.amount > 0, "Order value is less than 0.0001 EOS. Increase amount.");
+        return order_value;
     }
 
     asset get_gft_amount (asset price_per_gft, asset eos_amount)

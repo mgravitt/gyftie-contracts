@@ -819,6 +819,7 @@ ACTION gyftietoken::unstaked (const name user, const asset quantity)
 ACTION gyftietoken::requnstake (const name user, const asset quantity)
 {
     require_auth (user);
+    eosio::check (quantity.amount > 0, "Requested unstake quantity must be greater than zero.");
 
     profile_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (user.value);
