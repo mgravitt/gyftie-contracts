@@ -1,6 +1,5 @@
 #include "gyftietoken.hpp"
 
-
 ACTION gyftietoken::chgthrottle (const uint32_t throttle)
 {
     require_any_signatory();

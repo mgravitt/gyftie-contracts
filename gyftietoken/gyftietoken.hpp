@@ -25,6 +25,7 @@ CONTRACT gyftietoken : public contract
     // ACTION copygyfts1();
     // ACTION copygyfts2();
     // ACTION deloriggyfts();
+
     ACTION chgthrottle(const uint32_t throttle);
     
     ACTION sigupdate ();
@@ -616,7 +617,7 @@ CONTRACT gyftietoken : public contract
         auto gyfter_index = g_t.get_index<"bygyfter"_n>();
         auto gyfter_itr = gyfter_index.find(validator.value);
 
-        while (gyfter_itr != gyfter_index.end()) {
+        while (gyfter_itr != gyfter_index.end() && gyfter_itr->gyfter == validator) {
             eosio::check (gyfter_itr->gyftee != challenged_account, "Validator cannot validate an account they gyfted.");
             gyfter_itr++;
         }
@@ -624,7 +625,7 @@ CONTRACT gyftietoken : public contract
         auto gyftee_index = g_t.get_index<"bygyftee"_n>();
         auto gyftee_itr = gyftee_index.find(validator.value);
 
-        while (gyftee_itr != gyftee_index.end()) {
+        while (gyftee_itr != gyftee_index.end() && gyftee_itr->gyftee == validator) {
             eosio::check (gyftee_itr->gyfter != challenged_account, "Validator cannot validate their gyfter.");
             gyftee_itr++;
         }
