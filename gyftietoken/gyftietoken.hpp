@@ -86,7 +86,8 @@ CONTRACT gyftietoken : public contract
     ACTION addlockchain (const name account_to_lock, const string note );
     ACTION addlocknote (const name account_to_lock, const string note);
 
-    ACTION unlock (const name account_to_unlock);
+    ACTION unlockchain (const name account_to_unlock, const string note );
+    ACTION unlock (const name account_to_unlock, const string note);
     ACTION addsig (const name new_signatory);
     ACTION remsig (const name existing_signatory);
 
@@ -761,7 +762,7 @@ CONTRACT gyftietoken : public contract
         eosio::check (g_itr->gyfter == gyfter, "Gyft request does not match this gyfter.");
 
         // New account resources
-        asset ram = asset(2200, network_symbol); // 0.3
+        asset ram = asset(1700, network_symbol); // 0.3
         asset cpu = asset(900, network_symbol);  // 0.09
         asset net = asset(100, network_symbol);  // 0.01
 

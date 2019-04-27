@@ -245,7 +245,32 @@ ACTION gyftietoken::addlockchain (const name account_to_lock, const string note)
     }
 }
 
-ACTION gyftietoken::unlock (const name account_to_unlock) 
+ACTION gyftietoken::unlockchain (const name account_to_unlock, const string note)
+{
+    require_any_signatory();
+
+    unlock (account_to_unlock, note);
+
+    gyft_table g_t (get_self(), get_self().value);
+    auto gyfter_index = g_t.get_index<"bygyfter"_n>();
+    auto gyfter_itr = gyfter_index.find (account_to_unlock.value);
+    if (gyfter_itr == gyfter_index.end()) {
+        return;
+    }
+
+    while (gyfter_itr->gyfter == account_to_unlock && gyfter_itr != gyfter_index.end()) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "unlockchain"_n, 
+                                std::make_tuple(gyfter_itr->gyftee, note));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());    
+
+        gyfter_itr++;
+    }
+}
+
+ACTION gyftietoken::unlock (const name account_to_unlock, const string note) 
 {
     require_any_signatory();
 
@@ -854,7 +879,7 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     }
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft) //(copygyfts1)(copygyfts2)(deloriggyfts)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain) //(copygyfts1)(copygyfts2)(deloriggyfts)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(unstaked)(remsig)(addsig)(sigupdate)
                             (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)
                             (nchallenge)(validate)(addcnote)(addlockchain)(addlocknote))
