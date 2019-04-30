@@ -22,15 +22,17 @@ CONTRACT gyftietoken : public contract
     using contract::contract;
 
   public:
-    // ACTION copygyfts1();
-    // ACTION copygyfts2();
-    // ACTION deloriggyfts();
+
+    // TEMPORARY actions needed for deployments
+    ACTION copyprofs (const name account);
+    ACTION fixstakes ();
+    ACTION fixstake (const name account);
+    // ACTION sigupdate ();
+    ACTION copyback (const name account);
+    ACTION removeprofs (const name account);
+    ACTION upperm();
 
     ACTION chgthrottle(const uint32_t throttle);
-    
-    ACTION sigupdate ();
-
-    // ACTION upperm();
 
     ACTION setconfig(const name token_gen, const name gftorderbook, const name gyftie_foundation);
 
@@ -53,6 +55,8 @@ CONTRACT gyftietoken : public contract
     
     ACTION requnstake (const name user, const asset quantity);
     ACTION unstaked (const name user, const asset quantity); 
+    ACTION unstaked2 (const name user, const asset quantity); 
+    ACTION stake (const name account, const asset quantity);
 
     ACTION calcgyft(name from, name to);
 
@@ -182,16 +186,6 @@ CONTRACT gyftietoken : public contract
 
     typedef eosio::multi_index<"proposals"_n, proposal> proposal_table;
 
-    // TABLE tokengen
-    // {
-    //     name from;
-    //     name to;
-    //     asset generated_amount;
-    // };
-
-    // typedef singleton<"tokengens"_n, tokengen> tokengen_table;
-    // typedef eosio::multi_index<"tokengens"_n, tokengen> tokengen_table_placeholder;
-
     TABLE lock
     {
         name            account;
@@ -223,21 +217,25 @@ CONTRACT gyftietoken : public contract
         string      id_expiration;
         asset       gft_balance;
         asset       staked_balance;
+
+        // DEPLOY
+        asset       unstaking_balance; // = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
 
-    // TABLE tprofile
-    // {
-    //     name        account;
-    //     uint32_t    rating_sum;
-    //     uint16_t    rating_count;
-    //     string      idhash;
-    //     string      id_expiration;
-    //     asset       gft_balance;
-    //     uint64_t    primary_key() const { return account.value; }
-    // };
-    // typedef eosio::multi_index<"tprofiles"_n, tprofile> tprofile_table;
+    TABLE tprofile
+    {
+        name        account;
+        uint32_t    rating_sum;
+        uint16_t    rating_count;
+        string      idhash;
+        string      id_expiration;
+        asset       gft_balance;
+        asset       staked_balance;
+        uint64_t    primary_key() const { return account.value; }
+    };
+    typedef eosio::multi_index<"tprofiles"_n, tprofile> tprofile_table;
 
     TABLE challenge 
     {
@@ -393,9 +391,6 @@ CONTRACT gyftietoken : public contract
         std::vector<permission_level_weight> accounts;
         std::vector<wait_weight> waits;
     };
-
-    // void sub_balance(name owner, asset value);
-    // void add_balance(name owner, asset value, name ram_payer);
 
     authority keystring_authority(string key_str)
     {
@@ -563,19 +558,20 @@ CONTRACT gyftietoken : public contract
         });
     }
 
-    void stake (name account, asset quantity) 
-    {
-        //sub_balance (account, quantity);
+    // void stake (name account, asset quantity) 
+    // {
+    //     //sub_balance (account, quantity);
 
-        profile_table p_t (get_self(), get_self().value);
-        auto p_itr = p_t.find (account.value);
-        eosio::check (p_itr != p_t.end(), "Account profile not found.");
+    //     profile_table p_t (get_self(), get_self().value);
+    //     auto p_itr = p_t.find (account.value);
+    //     eosio::check (p_itr != p_t.end(), "Account profile not found.");
+    //     eosio::check (p_itr->gft_balance >= quantity, "Liquid balance is less than quanitity staking.");
 
-        p_t.modify (p_itr, get_self(), [&](auto &p) {
-            p.gft_balance -= quantity;
-            p.staked_balance += quantity;
-        });
-    }
+    //     p_t.modify (p_itr, get_self(), [&](auto &p) {
+    //         p.gft_balance -= quantity;
+    //         p.staked_balance += quantity;
+    //     });
+    // }
 
     void unstake (name account, asset quantity) 
     {
@@ -584,10 +580,15 @@ CONTRACT gyftietoken : public contract
         profile_table p_t (get_self(), get_self().value);
         auto p_itr = p_t.find (account.value);
         eosio::check (p_itr != p_t.end(), "Account profile not found.");
-
+        
+        // DEPLOY
+        eosio::check (p_itr->unstaking_balance >= quantity, "Unstaking balance is less than quanitity unstaking.");
+                
         p_t.modify (p_itr, get_self(), [&](auto &p) {
             p.gft_balance += quantity;
-            p.staked_balance -= quantity;
+            // DEPLOY
+            p.unstaking_balance -= quantity;
+            //p.staked_balance -= quantity;
         });
     }
 
@@ -699,6 +700,8 @@ CONTRACT gyftietoken : public contract
             p.idhash = idhash;
             p.id_expiration = id_expiration;
             p.gft_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+            // DEPLOY
+            p.unstaking_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
             p.staked_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
         });
     }
@@ -943,12 +946,13 @@ CONTRACT gyftietoken : public contract
     void defer_unstake (const name user, const asset quantity, const uint32_t delay) 
     {
         eosio::transaction out{};
+        // DEPLOY
         out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-            get_self(), "unstaked"_n, 
+            get_self(), "unstaked2"_n, 
             std::make_tuple(user, quantity));
         out.delay_sec = delay;
         out.send(current_block_time().to_time_point().sec_since_epoch() + user.value + delay, get_self());    
-     }
+    }
 
     void sub_balance(const name owner, const asset value)
     {

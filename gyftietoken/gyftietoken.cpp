@@ -9,23 +9,86 @@ ACTION gyftietoken::chgthrottle (const uint32_t throttle)
     t_t.set (t, get_self());
 }
 
-ACTION gyftietoken::sigupdate ()
-{
-    require_auth (get_self());
+// ACTION gyftietoken::sigupdate ()
+// {
+//     require_auth (get_self());
     
-    // symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
-    // asset josh {76902248, sym };
-    // asset vicky {75364208, sym};
-    // asset scott {73856928, sym};
+//     // symbol sym = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+//     // asset josh {76902248, sym };
+//     // asset vicky {75364208, sym};
+//     // asset scott {73856928, sym};
 
-    // unstake ("joshjohnpott"_n, josh);
-    // unstake ("vickiepotter"_n, vicky);
-    // unstake ("scottlazerso"_n, scott);
+//     // unstake ("joshjohnpott"_n, josh);
+//     // unstake ("vickiepotter"_n, vicky);
+//     // unstake ("scottlazerso"_n, scott);
 
-    xfer_account ("joshjohnpott"_n, "joshuapotter"_n);
-    xfer_account ("vickiepotter"_n, "vicdonpotter"_n);
-    xfer_account ("scottlazerso"_n, "slazersonfam"_n);
+//     xfer_account ("joshjohnpott"_n, "joshuapotter"_n);
+//     xfer_account ("vickiepotter"_n, "vicdonpotter"_n);
+//     xfer_account ("scottlazerso"_n, "slazersonfam"_n);
 
+// }
+
+ACTION gyftietoken::fixstake (const name account)
+{
+    eosio::check (  has_auth (get_self()) || 
+                has_auth ("zombiejigsaw"_n),    
+            "Permission denied");
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio::check (p_itr != p_t.end(), "Account not found.");
+
+    p_t.modify (p_itr, get_self(), [&](auto &p){
+        p.gft_balance += p.staked_balance;
+        p.staked_balance = p.gft_balance * 0;
+    });
+}
+
+ACTION gyftietoken::fixstakes ()
+{
+//     bebepoppyeos
+// dadandamaraa
+// guydanrshege
+// romanaremane
+// profwilliams
+// iamyoungprof
+// profoliver12
+// onucheahmodu
+// williamsonuh
+// emmanueleju1
+// youngprof122
+// olasojiolaso
+// irwansyaheos
+// basitbasteel
+// smartiielove
+// abduljalilll
+// igot2problem
+// adedhayor123
+// youngprof134
+// erwansyaheos
+// tojukaka1234
+// gbindinazeez
+// jacktherippe
+// eggandbacon1
+// sitinurbayan
+// naijamainman
+
+    require_auth ("zombiejigsaw"_n);
+
+    profile_table p_t(get_self(), get_self().value);
+    auto p_itr = p_t.begin();
+
+    while (p_itr != p_t.end()) {
+        if (p_itr->staked_balance.amount < 0) {
+            eosio::transaction out{};
+            out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                get_self(), "fixstake"_n, 
+                std::make_tuple(p_itr->account));
+            out.delay_sec = 0;
+            out.send(get_next_sender_id(), get_self());    
+        }
+        p_itr++;
+    }
 }
 
 // ACTION gyftietoken::copygyfts1 ()
@@ -68,84 +131,174 @@ ACTION gyftietoken::sigupdate ()
 //     }
 // }
 
-// ACTION gyftietoken::upperm () 
-// {
-//     permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
-//     permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
-//     permission_level zj = permission_level{"zombiejigsaw"_n, "active"_n};
-
-//     permission_level_weight df3_weight = permission_level_weight {df3, 1};
-//     permission_level_weight df2_weight = permission_level_weight {df2, 1};
-//     permission_level_weight zj_weight = permission_level_weight {zj, 2};
-
-//     vector<permission_level_weight> accounts;
+ACTION gyftietoken::upperm () 
+{
+    permission_level ar = permission_level{"amandarachel"_n, "active"_n};
+    permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
+    //permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
+    permission_level zj = permission_level{"zombiejigsaw"_n, "active"_n};
     
-//     accounts.push_back (df2_weight);
-//     accounts.push_back (df3_weight);
-//     accounts.push_back (zj_weight);
+    permission_level_weight ar_weight = permission_level_weight {ar, 1};
+    permission_level_weight df3_weight = permission_level_weight {df3, 1};
+    //permission_level_weight df2_weight = permission_level_weight {df2, 1};
+    permission_level_weight zj_weight = permission_level_weight {zj, 1};
     
-//     authority auth = authority{3, {}, accounts, {}};
+    vector<permission_level_weight> accounts;
+    
+    accounts.push_back (ar_weight);
+   // accounts.push_back (df2_weight);
+    accounts.push_back (df3_weight);
+    accounts.push_back (zj_weight);
+    
+    authority auth = authority{2, {}, accounts, {}};
 
-//     auto update_auth_payload = std::make_tuple(get_self(), "active"_n, "owner"_n, auth);
+    auto update_auth_payload = std::make_tuple(get_self(), "active"_n, "owner"_n, auth);
 
-//     action(
-//         permission_level{get_self(), "owner"_n},
-//         "eosio"_n,
-//         "updateauth"_n,
-//         update_auth_payload)
-//     .send();
-// }
+    action(
+        permission_level{get_self(), "owner"_n},
+        "eosio"_n,
+        "updateauth"_n,
+        update_auth_payload)
+    .send();
+}
 
-// ACTION gyftietoken::copybal1 ()
-// {
-//     //require_auth ("zombiejigsaw"_n);
+ACTION gyftietoken::copyback (const name account)
+{
+    eosio::check (  has_auth (get_self()) || 
+            has_auth ("zombiejigsaw"_n),    
+        "Permission denied");
+    // config_table config (get_self(), get_self().value);
+    // Config c = config.get();
 
-//     config_table config (get_self(), get_self().value);
-//     Config c = config.get();
+    profile_table p_t (get_self(), get_self().value);
+    tprofile_table tp_t (get_self(), get_self().value); 
+    auto tp_itr = tp_t.find (account.value);
+    eosio::check (tp_itr != tp_t.end(), "Account not found");
 
-//     profile_table p_t (get_self(), get_self().value);
-//     symbol gft_symbol = symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION};
+    int counter = 0;
+    while (tp_itr != tp_t.end() && counter <= 10) {
 
-//     accounts a_t (get_self(), c.gftorderbook.value);
-//     auto a_itr = a_t.find (gft_symbol.code().raw());
+        p_t.emplace (get_self(), [&](auto &p) {
+            p.account = tp_itr->account;
+            p.gft_balance = tp_itr->gft_balance;
+            p.staked_balance = tp_itr->staked_balance;
+            p.id_expiration = tp_itr->id_expiration;
+            p.idhash = tp_itr->idhash;
+            // DEPLOY
+            p.unstaking_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+        });
+        counter++;
+        tp_itr++;
+    }
 
-//     tprofile_table tp_t (get_self(), get_self().value); 
-//     tp_t.emplace (get_self(), [&](auto &t) {
-//         t.account = c.gftorderbook;
-//         t.gft_balance = a_itr->balance;
-//         t.idhash = "GFT Order Book Account";
-//     });
+    if (tp_itr != tp_t.end()) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "copyback"_n, 
+                                std::make_tuple(tp_itr->account));
+        out.delay_sec = 0;
+        out.send(get_next_sender_id(), get_self());    
+    }
+}
 
-//     a_t = accounts (get_self(), c.gyftie_foundation.value);
-//     a_itr = a_t.find (gft_symbol.code().raw());
-
-//     tp_t.emplace (get_self(), [&](auto &t) {
-//         t.account = c.gyftie_foundation;
-//         t.gft_balance = a_itr->balance;
-//         t.idhash = "Gyftie Limited Account";
-//     });
-
-//     auto p_itr = p_t.begin();
-//     while (p_itr != p_t.end()) {
-//         if (p_itr->account == c.gftorderbook || p_itr->account == c.gyftie_foundation) {
-
-//         } else {
-//             a_t = accounts (get_self(), p_itr->account.value);
-//             a_itr = a_t.find (gft_symbol.code().raw());
-
-//             tp_t.emplace (get_self(), [&](auto& t) {
-//                 t.account = p_itr->account;
-//                 t.rating_sum = p_itr->rating_sum;
-//                 t.rating_count = p_itr->rating_count;
-//                 t.idhash = p_itr->idhash;
-//                 t.id_expiration = p_itr->id_expiration;
-//                 t.gft_balance = a_itr->balance;
-//             });
-//         }
+ACTION gyftietoken::removeprofs (const name account) 
+{
+    eosio::check (  has_auth (get_self()) || 
+            has_auth ("zombiejigsaw"_n),    
+        "Permission denied");
         
-//         p_itr++;
-//     }
-// }
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio::check (p_itr != p_t.end(), "Account not found");
+
+    int counter = 0;
+    while (p_itr != p_t.end() && counter <= 25) {
+        p_itr = p_t.erase (p_itr);
+        counter++;
+    }
+
+    if (p_itr != p_t.end()) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "removeprofs"_n, 
+                                std::make_tuple(p_itr->account));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());    
+    }
+}
+
+ACTION gyftietoken::copyprofs (const name account)
+{
+    eosio::check (  has_auth (get_self()) || 
+            has_auth ("zombiejigsaw"_n),    
+        "Permission denied");
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio::check (p_itr != p_t.end(), "Account not found");
+
+    tprofile_table tp_t (get_self(), get_self().value); 
+
+    int counter = 0;
+    while (p_itr != p_t.end() && counter <= 10) {
+
+        tp_t.emplace (get_self(), [&](auto &t) {
+            t.account = p_itr->account;
+            t.gft_balance = p_itr->gft_balance;
+            t.staked_balance = p_itr->staked_balance;
+            t.id_expiration = p_itr->id_expiration;
+            t.idhash = p_itr->idhash;
+        });
+        counter++;
+        p_itr++;
+    }
+
+    if (p_itr != p_t.end()) {
+        eosio::transaction out{};
+        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+                                get_self(), "copyprofs"_n, 
+                                std::make_tuple(p_itr->account));
+        out.delay_sec = 1;
+        out.send(get_next_sender_id(), get_self());    
+    }
+
+    // tprofile_table tp_t (get_self(), get_self().value); 
+    // tp_t.emplace (get_self(), [&](auto &t) {
+    //     t.account = c.gftorderbook;
+    //     t.gft_balance = a_itr->balance;
+    //     t.idhash = "GFT Order Book Account";
+    // });
+
+    // a_t = accounts (get_self(), c.gyftie_foundation.value);
+    // a_itr = a_t.find (gft_symbol.code().raw());
+
+    // tp_t.emplace (get_self(), [&](auto &t) {
+    //     t.account = c.gyftie_foundation;
+    //     t.gft_balance = a_itr->balance;
+    //     t.idhash = "Gyftie Limited Account";
+    // });
+
+    // auto p_itr = p_t.begin();
+    // while (p_itr != p_t.end()) {
+    //     if (p_itr->account == c.gftorderbook || p_itr->account == c.gyftie_foundation) {
+
+    //     } else {
+    //         a_t = accounts (get_self(), p_itr->account.value);
+    //         a_itr = a_t.find (gft_symbol.code().raw());
+
+    //         tp_t.emplace (get_self(), [&](auto& t) {
+    //             t.account = p_itr->account;
+    //             t.rating_sum = p_itr->rating_sum;
+    //             t.rating_count = p_itr->rating_count;
+    //             t.idhash = p_itr->idhash;
+    //             t.id_expiration = p_itr->id_expiration;
+    //             t.gft_balance = a_itr->balance;
+    //         });
+    //     }
+        
+    //     p_itr++;
+    // }
+}
 
 // ACTION gyftietoken::addlockperm ()
 // {
@@ -440,7 +593,9 @@ ACTION gyftietoken::validate (const name validator, const name account, const st
     auto c_itr = c_t.find (account.value);
     eosio::check (c_itr != c_t.end(), "Account does not have an active challenge.");
 
-    unstake (c_itr->challenger_account, c_itr->challenge_stake);
+    // DEPLOY
+    requnstake (c_itr->challenger_account, c_itr->challenge_stake);
+    //unstake (c_itr->challenger_account, c_itr->challenge_stake);
 
     asset validator_amount = adjust_asset (c_itr->challenge_stake, (float) 0.200000000);
     asset challenged_amount = adjust_asset (c_itr->challenge_stake, (float) 0.400000000);
@@ -825,19 +980,59 @@ ACTION gyftietoken::transfer(const name from, const name to, const asset quantit
 ACTION gyftietoken::xfertostake(const name from, const name to, const asset quantity, const string memo)
 {
     transfer (from, to, quantity, memo);
-    stake (to, quantity);
+
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+        get_self(), "stake"_n, 
+        std::make_tuple(to, quantity));
+    out.delay_sec = 1;
+    out.send(get_next_sender_id(), get_self());    
+    // stake (to, quantity);
 }
 
 ACTION gyftietoken::issuetostake (const name to, const asset quantity, const string memo)
 {
     issue (to, quantity, memo);
-    stake (to, quantity);
+
+    print (" Issue to stake: ", to, "\n\n");
+
+    eosio::transaction out{};
+    out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+        get_self(), "stake"_n, 
+        std::make_tuple(to, quantity));
+    out.delay_sec = 1;
+    out.send(get_next_sender_id(), get_self());    
 }
 
 ACTION gyftietoken::unstaked (const name user, const asset quantity) 
 {
+    // DEPLOY
+    // require_auth (get_self());
+    // unstake (user, quantity);
+}
+
+ACTION gyftietoken::unstaked2 (const name user, const asset quantity) 
+{
+    // DEPLOY
     require_auth (get_self());
     unstake (user, quantity);
+}
+
+ACTION gyftietoken::stake (const name account, const asset quantity) 
+{
+    print (" Staking: ", account, "\n\n");
+
+    eosio::check (has_auth (account) || has_auth (get_self()), "Staking requires authority of account or token contract.");
+
+    profile_table p_t (get_self(), get_self().value);
+    auto p_itr = p_t.find (account.value);
+    eosio::check (p_itr != p_t.end(), "Account profile not found.");
+    eosio::check (p_itr->gft_balance >= quantity, "Liquid balance is less than quanitity staking.");
+
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+        p.gft_balance -= quantity;
+        p.staked_balance += quantity;
+    });
 }
 
 ACTION gyftietoken::requnstake (const name user, const asset quantity)
@@ -859,12 +1054,17 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
         challenger_itr++;
     }
 
-    eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
-    eosio::check (p_itr->staked_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
+    // DEPLOY
+    // eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
+    // eosio::check (p_itr->staked_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
+
+    eosio::check (p_itr->staked_balance - p_itr->unstaking_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
+    eosio::check (p_itr->staked_balance - p_itr->unstaking_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
 
     asset remaining_stake = quantity;
 
-    uint32_t    delay_increment = 60 * 60 * 24;  // one day
+    // DEPLOY
+    uint32_t    delay_increment = 30;  // one day
     uint32_t    delay = delay_increment;
     float       stake_increment = 0.05000000000;
 
@@ -877,9 +1077,16 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
         delay += delay_increment;
         remaining_stake -= current_stake;
     }
+
+     // DEPLOY
+    p_t.modify (p_itr, get_self(), [&](auto &p) {
+      
+        p.unstaking_balance += quantity;
+        p.staked_balance -= quantity;
+    });
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain) //(copygyfts1)(copygyfts2)(deloriggyfts)
-                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(unstaked)(remsig)(addsig)(sigupdate)
-                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain)(copyprofs)(copyback)(removeprofs)(unstaked2)(upperm) //(copygyfts1)(copygyfts2)(deloriggyfts)
+                            (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(stake)(unstaked)(remsig)(addsig) //(sigupdate)
+                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)(fixstake)(fixstakes)
                             (nchallenge)(validate)(addcnote)(addlockchain)(addlocknote))
