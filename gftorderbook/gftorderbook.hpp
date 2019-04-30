@@ -1,6 +1,9 @@
 
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/time.hpp>
+#include <eosio/system.hpp>
 #include <string>
 #include <algorithm>    // std::find
 #include <eosio/singleton.hpp>
@@ -17,6 +20,8 @@ CONTRACT gftorderbook : public contract
     using contract::contract;
 
   public:
+
+   ACTION upperm ();
 
     ACTION setconfig (name gyftiecontract, 
                         name valid_counter_token_contract,
@@ -266,6 +271,32 @@ CONTRACT gftorderbook : public contract
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
+
+    struct key_weight
+    {
+        eosio::public_key key;
+        uint16_t weight;
+    };
+
+    struct permission_level_weight
+    {
+        permission_level permission;
+        uint16_t weight;
+    };
+
+    struct wait_weight
+    {
+        uint32_t wait_sec;
+        uint16_t weight;
+    };
+
+    struct authority
+    {
+        uint32_t threshold;
+        std::vector<key_weight> keys;
+        std::vector<permission_level_weight> accounts;
+        std::vector<wait_weight> waits;
+    };
 
     void add_userreward (name user, asset reward) 
     {

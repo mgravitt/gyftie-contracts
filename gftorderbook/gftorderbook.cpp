@@ -1,6 +1,37 @@
 #include "gftorderbook.hpp"
 #include <algorithm>
 
+ACTION gftorderbook::upperm () 
+{
+    permission_level ar = permission_level{"amandarachel"_n, "active"_n};
+    permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
+    //permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
+    permission_level zj = permission_level{"gftma.x"_n, "active"_n};
+    
+    permission_level_weight ar_weight = permission_level_weight {ar, 1};
+    permission_level_weight df3_weight = permission_level_weight {df3, 1};
+    //permission_level_weight df2_weight = permission_level_weight {df2, 1};
+    permission_level_weight zj_weight = permission_level_weight {zj, 1};
+    
+    vector<permission_level_weight> accounts;
+    
+    accounts.push_back (ar_weight);
+   // accounts.push_back (df2_weight);
+    accounts.push_back (df3_weight);
+    accounts.push_back (zj_weight);
+    
+    authority auth = authority{2, {}, accounts, {}};
+
+    auto update_auth_payload = std::make_tuple(get_self(), "active"_n, "owner"_n, auth);
+
+    action(
+        permission_level{get_self(), "owner"_n},
+        "eosio"_n,
+        "updateauth"_n,
+        update_auth_payload)
+    .send();
+}
+
 ACTION gftorderbook::setconfig (name gyftiecontract, 
                         name valid_counter_token_contract,
                         string valid_counter_symbol_string,
@@ -863,7 +894,7 @@ extern "C" {
             switch (action) { 
                 EOSIO_DISPATCH_HELPER(gftorderbook, (setconfig)(limitbuygft)(limitsellgft)(marketbuy)(marketsell)(stack)(stackbuy)(stacksell)(delsorders)(defbuckets)(delbordersv)(delsordersv)
                                                     (removeorders)(processbook)(withdraw)(delconfig)(pause)(unpause)(tradeexec)(stacksellrec)(stackbuyrec)(compilestate)
-                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)(addliqreward)(payrewards)
+                                                    (delbuyorder)(delsellorder)(admindelso)(admindelbo)(clearstate)(setstate)(reassign)(addliqreward)(payrewards)(upperm)
                                                     (setrewconfig)(addbucket)(buildbucket)(buildbuckets)(payliqinfrew)(payrewbucket)(payrewbucks))
             }    
         }
