@@ -31,7 +31,7 @@ ACTION gyftietoken::chgthrottle (const uint32_t throttle)
 ACTION gyftietoken::fixstake (const name account)
 {
     eosio::check (  has_auth (get_self()) || 
-                has_auth ("zombiejigsaw"_n),    
+                has_auth ("gftma.x"_n),    
             "Permission denied");
 
     profile_table p_t (get_self(), get_self().value);
@@ -73,7 +73,7 @@ ACTION gyftietoken::fixstakes ()
 // sitinurbayan
 // naijamainman
 
-    require_auth ("zombiejigsaw"_n);
+    require_auth ("gftma.x"_n);
 
     profile_table p_t(get_self(), get_self().value);
     auto p_itr = p_t.begin();
@@ -93,7 +93,7 @@ ACTION gyftietoken::fixstakes ()
 
 // ACTION gyftietoken::copygyfts1 ()
 // {
-//     require_auth ("zombiejigsaw"_n);
+//     require_auth ("gftma.x"_n);
 //     gyft_table g_t (get_self(), get_self().value);
 //     auto g_itr = g_t.begin();
 
@@ -122,7 +122,7 @@ ACTION gyftietoken::fixstakes ()
 
 // ACTION gyftietoken::deloriggyfts ()
 // {
-//     require_auth ("zombiejigsaw"_n);
+//     require_auth ("gftma.x"_n);
 //     gyft_table g_t (get_self(), get_self().value);
 
 //     auto g_itr = g_t.begin();
@@ -136,7 +136,7 @@ ACTION gyftietoken::upperm ()
     permission_level ar = permission_level{"amandarachel"_n, "active"_n};
     permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
     //permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
-    permission_level zj = permission_level{"zombiejigsaw"_n, "active"_n};
+    permission_level zj = permission_level{"gftma.x"_n, "active"_n};
     
     permission_level_weight ar_weight = permission_level_weight {ar, 1};
     permission_level_weight df3_weight = permission_level_weight {df3, 1};
@@ -165,7 +165,7 @@ ACTION gyftietoken::upperm ()
 ACTION gyftietoken::copyback (const name account)
 {
     eosio::check (  has_auth (get_self()) || 
-            has_auth ("zombiejigsaw"_n),    
+            has_auth ("gftma.x"_n),    
         "Permission denied");
     // config_table config (get_self(), get_self().value);
     // Config c = config.get();
@@ -204,7 +204,7 @@ ACTION gyftietoken::copyback (const name account)
 ACTION gyftietoken::removeprofs (const name account) 
 {
     eosio::check (  has_auth (get_self()) || 
-            has_auth ("zombiejigsaw"_n),    
+            has_auth ("gftma.x"_n),    
         "Permission denied");
         
     profile_table p_t (get_self(), get_self().value);
@@ -230,7 +230,7 @@ ACTION gyftietoken::removeprofs (const name account)
 ACTION gyftietoken::copyprofs (const name account)
 {
     eosio::check (  has_auth (get_self()) || 
-            has_auth ("zombiejigsaw"_n),    
+            has_auth ("gftma.x"_n),    
         "Permission denied");
 
     profile_table p_t (get_self(), get_self().value);
@@ -305,7 +305,7 @@ ACTION gyftietoken::copyprofs (const name account)
     
 //     permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
 //     permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
-//     permission_level zj = permission_level{"zombiejigsaw"_n, "active"_n};
+//     permission_level zj = permission_level{"gftma.x"_n, "active"_n};
 
 //     permission_level_weight df3_weight = permission_level_weight {df3, 1};
 //     permission_level_weight df2_weight = permission_level_weight {df2, 1};
@@ -656,7 +656,7 @@ ACTION gyftietoken::removeprop (const uint64_t proposal_id)
     eosio::check (  has_auth (get_self()) || 
                     has_auth (p_itr->proposer) ||
                     has_auth ("danielflora3"_n) ||
-                    has_auth ("zombiejigsaw"_n),    
+                    has_auth ("gftma.x"_n),    
         "Permission denied - only Gyftie signatory or proposer can remove a proposal.");
 
     p_t.erase (p_itr);
