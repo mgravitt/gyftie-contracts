@@ -24,12 +24,12 @@ CONTRACT gyftietoken : public contract
   public:
 
     // TEMPORARY actions needed for deployments
-    ACTION copyprofs (const name account);
+    // ACTION copyprofs (const name account);
     //ACTION fixstakes (const name account);
-    ACTION fixstake (const name account);
+    // ACTION fixstake (const name account);
     // ACTION sigupdate ();
-    ACTION copyback (const name account);
-    ACTION removeprofs (const name account);
+    // ACTION copyback (const name account);
+    ACTION removetprofs (const name account);
     //ACTION upperm();
 
     ACTION chgthrottle(const uint32_t throttle);

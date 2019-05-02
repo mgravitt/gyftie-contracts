@@ -28,21 +28,21 @@ ACTION gyftietoken::chgthrottle (const uint32_t throttle)
 
 // }
 
-ACTION gyftietoken::fixstake (const name account)
-{
-    eosio::check (  has_auth (get_self()) || 
-                has_auth ("gftma.x"_n),    
-            "Permission denied");
+// ACTION gyftietoken::fixstake (const name account)
+// {
+//     eosio::check (  has_auth (get_self()) || 
+//                 has_auth ("gftma.x"_n),    
+//             "Permission denied");
 
-    profile_table p_t (get_self(), get_self().value);
-    auto p_itr = p_t.find (account.value);
-    eosio::check (p_itr != p_t.end(), "Account not found.");
+//     profile_table p_t (get_self(), get_self().value);
+//     auto p_itr = p_t.find (account.value);
+//     eosio::check (p_itr != p_t.end(), "Account not found.");
 
-    p_t.modify (p_itr, get_self(), [&](auto &p){
-        p.gft_balance += p.staked_balance;
-        p.staked_balance = p.gft_balance * 0;
-    });
-}
+//     p_t.modify (p_itr, get_self(), [&](auto &p){
+//         p.gft_balance += p.staked_balance;
+//         p.staked_balance = p.gft_balance * 0;
+//     });
+// }
 
 // ACTION gyftietoken::fixstakes (const name account)
 // {
@@ -137,105 +137,105 @@ ACTION gyftietoken::fixstake (const name account)
 //     .send();
 // }
 
-ACTION gyftietoken::copyback (const name account)
-{
-    eosio::check (  has_auth (get_self()) || 
-            has_auth ("gftma.x"_n),    
-        "Permission denied");
-    // config_table config (get_self(), get_self().value);
-    // Config c = config.get();
+// ACTION gyftietoken::copyback (const name account)
+// {
+//     eosio::check (  has_auth (get_self()) || 
+//             has_auth ("gftma.x"_n),    
+//         "Permission denied");
+//     // config_table config (get_self(), get_self().value);
+//     // Config c = config.get();
 
-    profile_table p_t (get_self(), get_self().value);
-    tprofile_table tp_t (get_self(), get_self().value); 
-    auto tp_itr = tp_t.find (account.value);
-    eosio::check (tp_itr != tp_t.end(), "Account not found");
+//     profile_table p_t (get_self(), get_self().value);
+//     tprofile_table tp_t (get_self(), get_self().value); 
+//     auto tp_itr = tp_t.find (account.value);
+//     eosio::check (tp_itr != tp_t.end(), "Account not found");
 
-    int counter = 0;
-    while (tp_itr != tp_t.end() && counter <= 10) {
+//     int counter = 0;
+//     while (tp_itr != tp_t.end() && counter <= 10) {
 
-        p_t.emplace (get_self(), [&](auto &p) {
-            p.account = tp_itr->account;
-            p.gft_balance = tp_itr->gft_balance;
-            p.staked_balance = tp_itr->staked_balance;
-            p.id_expiration = tp_itr->id_expiration;
-            p.idhash = tp_itr->idhash;
-            // DEPLOY
-            p.unstaking_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
-        });
-        counter++;
-        tp_itr++;
-    }
+//         p_t.emplace (get_self(), [&](auto &p) {
+//             p.account = tp_itr->account;
+//             p.gft_balance = tp_itr->gft_balance;
+//             p.staked_balance = tp_itr->staked_balance;
+//             p.id_expiration = tp_itr->id_expiration;
+//             p.idhash = tp_itr->idhash;
+//             // DEPLOY
+//             p.unstaking_balance = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+//         });
+//         counter++;
+//         tp_itr++;
+//     }
 
-    if (tp_itr != tp_t.end()) {
-        eosio::transaction out{};
-        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-                                get_self(), "copyback"_n, 
-                                std::make_tuple(tp_itr->account));
-        out.delay_sec = 0;
-        out.send(get_next_sender_id(), get_self());    
-    }
-}
+//     if (tp_itr != tp_t.end()) {
+//         eosio::transaction out{};
+//         out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+//                                 get_self(), "copyback"_n, 
+//                                 std::make_tuple(tp_itr->account));
+//         out.delay_sec = 0;
+//         out.send(get_next_sender_id(), get_self());    
+//     }
+// }
 
-ACTION gyftietoken::removeprofs (const name account) 
+ACTION gyftietoken::removetprofs (const name account) 
 {
     eosio::check (  has_auth (get_self()) || 
             has_auth ("gftma.x"_n),    
         "Permission denied");
         
-    profile_table p_t (get_self(), get_self().value);
-    auto p_itr = p_t.find (account.value);
-    eosio::check (p_itr != p_t.end(), "Account not found");
+    tprofile_table tp_t (get_self(), get_self().value);
+    auto tp_itr = tp_t.find (account.value);
+    eosio::check (tp_itr != tp_t.end(), "Account not found");
 
     int counter = 0;
-    while (p_itr != p_t.end() && counter <= 25) {
-        p_itr = p_t.erase (p_itr);
+    while (tp_itr != tp_t.end() && counter <= 25) {
+        tp_itr = tp_t.erase (tp_itr);
         counter++;
     }
 
-    if (p_itr != p_t.end()) {
+    if (tp_itr != tp_t.end()) {
         eosio::transaction out{};
         out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-                                get_self(), "removeprofs"_n, 
-                                std::make_tuple(p_itr->account));
+                                get_self(), "removetprofs"_n, 
+                                std::make_tuple(tp_itr->account));
         out.delay_sec = 1;
         out.send(get_next_sender_id(), get_self());    
     }
 }
 
-ACTION gyftietoken::copyprofs (const name account)
-{
-    eosio::check (  has_auth (get_self()) || 
-            has_auth ("gftma.x"_n),    
-        "Permission denied");
+// ACTION gyftietoken::copyprofs (const name account)
+// {
+//     eosio::check (  has_auth (get_self()) || 
+//             has_auth ("gftma.x"_n),    
+//         "Permission denied");
 
-    profile_table p_t (get_self(), get_self().value);
-    auto p_itr = p_t.find (account.value);
-    eosio::check (p_itr != p_t.end(), "Account not found");
+//     profile_table p_t (get_self(), get_self().value);
+//     auto p_itr = p_t.find (account.value);
+//     eosio::check (p_itr != p_t.end(), "Account not found");
 
-    tprofile_table tp_t (get_self(), get_self().value); 
+//     tprofile_table tp_t (get_self(), get_self().value); 
 
-    int counter = 0;
-    while (p_itr != p_t.end() && counter <= 10) {
+//     int counter = 0;
+//     while (p_itr != p_t.end() && counter <= 10) {
 
-        tp_t.emplace (get_self(), [&](auto &t) {
-            t.account = p_itr->account;
-            t.gft_balance = p_itr->gft_balance;
-            t.staked_balance = p_itr->staked_balance;
-            t.id_expiration = p_itr->id_expiration;
-            t.idhash = p_itr->idhash;
-        });
-        counter++;
-        p_itr++;
-    }
+//         tp_t.emplace (get_self(), [&](auto &t) {
+//             t.account = p_itr->account;
+//             t.gft_balance = p_itr->gft_balance;
+//             t.staked_balance = p_itr->staked_balance;
+//             t.id_expiration = p_itr->id_expiration;
+//             t.idhash = p_itr->idhash;
+//         });
+//         counter++;
+//         p_itr++;
+//     }
 
-    if (p_itr != p_t.end()) {
-        eosio::transaction out{};
-        out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-                                get_self(), "copyprofs"_n, 
-                                std::make_tuple(p_itr->account));
-        out.delay_sec = 1;
-        out.send(get_next_sender_id(), get_self());    
-    }
+//     if (p_itr != p_t.end()) {
+//         eosio::transaction out{};
+//         out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+//                                 get_self(), "copyprofs"_n, 
+//                                 std::make_tuple(p_itr->account));
+//         out.delay_sec = 1;
+//         out.send(get_next_sender_id(), get_self());    
+//     }
 
     // tprofile_table tp_t (get_self(), get_self().value); 
     // tp_t.emplace (get_self(), [&](auto &t) {
@@ -273,7 +273,7 @@ ACTION gyftietoken::copyprofs (const name account)
         
     //     p_itr++;
     // }
-}
+// }
 
 // ACTION gyftietoken::addlockperm ()
 // {
@@ -962,14 +962,11 @@ ACTION gyftietoken::xfertostake(const name from, const name to, const asset quan
         std::make_tuple(to, quantity));
     out.delay_sec = 1;
     out.send(get_next_sender_id(), get_self());    
-    // stake (to, quantity);
 }
 
 ACTION gyftietoken::issuetostake (const name to, const asset quantity, const string memo)
 {
     issue (to, quantity, memo);
-
-    print (" Issue to stake: ", to, "\n\n");
 
     eosio::transaction out{};
     out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
@@ -995,14 +992,12 @@ ACTION gyftietoken::unstaked2 (const name user, const asset quantity)
 
 ACTION gyftietoken::stake (const name account, const asset quantity) 
 {
-    print (" Staking: ", account, "\n\n");
-
     eosio::check (has_auth (account) || has_auth (get_self()), "Staking requires authority of account or token contract.");
 
     profile_table p_t (get_self(), get_self().value);
     auto p_itr = p_t.find (account.value);
     eosio::check (p_itr != p_t.end(), "Account profile not found.");
-    eosio::check (p_itr->gft_balance >= quantity, "Liquid balance is less than quanitity staking.");
+    eosio::check (p_itr->gft_balance >= quantity, "Liquid balance is less than quantity staking.");
 
     p_t.modify (p_itr, get_self(), [&](auto &p) {
         p.gft_balance -= quantity;
@@ -1039,7 +1034,7 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     asset remaining_stake = quantity;
 
     // DEPLOY
-    uint32_t    delay_increment = 60;  // one day
+    uint32_t    delay_increment = 60 * 60 * 18;  
     uint32_t    delay = delay_increment;
     float       stake_increment = 0.05000000000;
 
