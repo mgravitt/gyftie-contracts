@@ -44,52 +44,27 @@ ACTION gyftietoken::fixstake (const name account)
     });
 }
 
-ACTION gyftietoken::fixstakes ()
-{
-//     bebepoppyeos
-// dadandamaraa
-// guydanrshege
-// romanaremane
-// profwilliams
-// iamyoungprof
-// profoliver12
-// onucheahmodu
-// williamsonuh
-// emmanueleju1
-// youngprof122
-// olasojiolaso
-// irwansyaheos
-// basitbasteel
-// smartiielove
-// abduljalilll
-// igot2problem
-// adedhayor123
-// youngprof134
-// erwansyaheos
-// tojukaka1234
-// gbindinazeez
-// jacktherippe
-// eggandbacon1
-// sitinurbayan
-// naijamainman
+// ACTION gyftietoken::fixstakes (const name account)
+// {
 
-    require_auth ("gftma.x"_n);
+//     require_auth ("gftma.x"_n);
 
-    profile_table p_t(get_self(), get_self().value);
-    auto p_itr = p_t.begin();
+//     profile_table p_t(get_self(), get_self().value);
+//     auto p_itr = p_t.find(account.value);
+//     eosio::check (p_itr != p_t.end(), "Account not found.");
 
-    while (p_itr != p_t.end()) {
-        if (p_itr->staked_balance.amount < 0) {
-            eosio::transaction out{};
-            out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
-                get_self(), "fixstake"_n, 
-                std::make_tuple(p_itr->account));
-            out.delay_sec = 0;
-            out.send(get_next_sender_id(), get_self());    
-        }
-        p_itr++;
-    }
-}
+//     while (p_itr != p_t.end()) {
+//         if (p_itr->staked_balance.amount < 0) {
+//             eosio::transaction out{};
+//             out.actions.emplace_back(permission_level{get_self(), "owner"_n}, 
+//                 get_self(), "fixstake"_n, 
+//                 std::make_tuple(p_itr->account));
+//             out.delay_sec = 0;
+//             out.send(get_next_sender_id(), get_self());    
+//         }
+//         p_itr++;
+//     }
+// }
 
 // ACTION gyftietoken::copygyfts1 ()
 // {
@@ -131,36 +106,36 @@ ACTION gyftietoken::fixstakes ()
 //     }
 // }
 
-ACTION gyftietoken::upperm () 
-{
-    permission_level ar = permission_level{"amandarachel"_n, "active"_n};
-    permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
-    //permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
-    permission_level zj = permission_level{"gftma.x"_n, "active"_n};
+// ACTION gyftietoken::upperm () 
+// {
+//     permission_level ar = permission_level{"amandarachel"_n, "active"_n};
+//     permission_level df3 = permission_level{"danielflora3"_n, "active"_n};
+//     //permission_level df2 = permission_level{"danielflora2"_n, "active"_n};
+//     permission_level zj = permission_level{"gftma.x"_n, "active"_n};
     
-    permission_level_weight ar_weight = permission_level_weight {ar, 1};
-    permission_level_weight df3_weight = permission_level_weight {df3, 1};
-    //permission_level_weight df2_weight = permission_level_weight {df2, 1};
-    permission_level_weight zj_weight = permission_level_weight {zj, 1};
+//     permission_level_weight ar_weight = permission_level_weight {ar, 1};
+//     permission_level_weight df3_weight = permission_level_weight {df3, 1};
+//     //permission_level_weight df2_weight = permission_level_weight {df2, 1};
+//     permission_level_weight zj_weight = permission_level_weight {zj, 1};
     
-    vector<permission_level_weight> accounts;
+//     vector<permission_level_weight> accounts;
     
-    accounts.push_back (ar_weight);
-   // accounts.push_back (df2_weight);
-    accounts.push_back (df3_weight);
-    accounts.push_back (zj_weight);
+//     accounts.push_back (ar_weight);
+//    // accounts.push_back (df2_weight);
+//     accounts.push_back (df3_weight);
+//     accounts.push_back (zj_weight);
     
-    authority auth = authority{2, {}, accounts, {}};
+//     authority auth = authority{2, {}, accounts, {}};
 
-    auto update_auth_payload = std::make_tuple(get_self(), "active"_n, "owner"_n, auth);
+//     auto update_auth_payload = std::make_tuple(get_self(), "active"_n, "owner"_n, auth);
 
-    action(
-        permission_level{get_self(), "owner"_n},
-        "eosio"_n,
-        "updateauth"_n,
-        update_auth_payload)
-    .send();
-}
+//     action(
+//         permission_level{get_self(), "owner"_n},
+//         "eosio"_n,
+//         "updateauth"_n,
+//         update_auth_payload)
+//     .send();
+// }
 
 ACTION gyftietoken::copyback (const name account)
 {
@@ -1055,8 +1030,8 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     }
 
     // DEPLOY
-    // eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
-    // eosio::check (p_itr->staked_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
+    //eosio::check (p_itr->staked_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
+    //eosio::check (p_itr->staked_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
 
     eosio::check (p_itr->staked_balance - p_itr->unstaking_balance >= quantity, "Requested unstake quantity exceeds staked balance.");
     eosio::check (p_itr->staked_balance - p_itr->unstaking_balance - challenged_balance >= quantity, "Requested unstake quantity exceeds staked balance when accounting for your active challenges.");
@@ -1064,7 +1039,7 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     asset remaining_stake = quantity;
 
     // DEPLOY
-    uint32_t    delay_increment = 30;  // one day
+    uint32_t    delay_increment = 60;  // one day
     uint32_t    delay = delay_increment;
     float       stake_increment = 0.05000000000;
 
@@ -1086,7 +1061,7 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     });
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain)(copyprofs)(copyback)(removeprofs)(unstaked2)(upperm) //(copygyfts1)(copygyfts2)(deloriggyfts)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain)(copyprofs)(copyback)(removeprofs)(unstaked2) //(upperm) //(copygyfts1)(copygyfts2)(deloriggyfts)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(stake)(unstaked)(remsig)(addsig) //(sigupdate)
-                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)(fixstake)(fixstakes)
+                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)(fixstake) //(fixstakes)
                             (nchallenge)(validate)(addcnote)(addlockchain)(addlocknote))

@@ -25,12 +25,12 @@ CONTRACT gyftietoken : public contract
 
     // TEMPORARY actions needed for deployments
     ACTION copyprofs (const name account);
-    ACTION fixstakes ();
+    //ACTION fixstakes (const name account);
     ACTION fixstake (const name account);
     // ACTION sigupdate ();
     ACTION copyback (const name account);
     ACTION removeprofs (const name account);
-    ACTION upperm();
+    //ACTION upperm();
 
     ACTION chgthrottle(const uint32_t throttle);
 
@@ -582,7 +582,7 @@ CONTRACT gyftietoken : public contract
         eosio::check (p_itr != p_t.end(), "Account profile not found.");
         
         // DEPLOY
-        eosio::check (p_itr->unstaking_balance >= quantity, "Unstaking balance is less than quanitity unstaking.");
+        eosio::check (p_itr->unstaking_balance >= quantity, "Unstaking balance is less than quantity unstaking.");
                 
         p_t.modify (p_itr, get_self(), [&](auto &p) {
             p.gft_balance += quantity;
