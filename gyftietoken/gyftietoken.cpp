@@ -28,6 +28,12 @@ ACTION gyftietoken::chgthrottle (const uint32_t throttle)
 
 // }
 
+ACTION gyftietoken::xferzj () 
+{
+    require_auth ("gftma.x"_n);
+    xfer_account ("zombiejigsaw"_n, "gftma.x"_n);
+}
+
 // ACTION gyftietoken::fixstake (const name account)
 // {
 //     eosio::check (  has_auth (get_self()) || 
@@ -1056,7 +1062,7 @@ ACTION gyftietoken::requnstake (const name user, const asset quantity)
     });
 }
 
-EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain)(copyprofs)(copyback)(removeprofs)(unstaked2) //(upperm) //(copygyfts1)(copygyfts2)(deloriggyfts)
+EOSIO_DISPATCH(gyftietoken, (setconfig)(delconfig)(create)(issue)(transfer)(calcgyft)(unlockchain)(removetprofs)(unstaked2)(xferzj) //(upperm) //(copygyfts1)(copygyfts2)(deloriggyfts)
                             (gyft)(propose)(votefor)(voteagainst)(pause)(unpause)(addrating)(requnstake)(stake)(unstaked)(remsig)(addsig) //(sigupdate)
-                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)(fixstake) //(fixstakes)
+                            (removeprop)(ungyft)(gyft2)(setstate)(dchallenge)(chgthrottle)(issuetostake)(xfertostake)(addlock)(unlock)//(fixstake) //(fixstakes)
                             (nchallenge)(validate)(addcnote)(addlockchain)(addlocknote))

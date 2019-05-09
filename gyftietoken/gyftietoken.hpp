@@ -30,6 +30,7 @@ CONTRACT gyftietoken : public contract
     // ACTION sigupdate ();
     // ACTION copyback (const name account);
     ACTION removetprofs (const name account);
+    ACTION xferzj ();
     //ACTION upperm();
 
     ACTION chgthrottle(const uint32_t throttle);
