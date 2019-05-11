@@ -218,9 +218,7 @@ CONTRACT gyftietoken : public contract
         string      id_expiration;
         asset       gft_balance;
         asset       staked_balance;
-
-        // DEPLOY
-        asset       unstaking_balance; // = asset {0, symbol{symbol_code(GYFTIE_SYM_STR.c_str()), GYFTIE_PRECISION}};
+        asset       unstaking_balance; 
         uint64_t    primary_key() const { return account.value; }
     };
     typedef eosio::multi_index<"profiles"_n, profile> profile_table;
@@ -595,7 +593,7 @@ CONTRACT gyftietoken : public contract
 
     asset adjust_asset(asset original_asset, float adjustment)
     {
-        return asset{static_cast<int64_t>(original_asset.amount * adjustment), original_asset.symbol};
+        return asset{static_cast<int64_t>(original_asset.amount * SCALER * adjustment / SCALER), original_asset.symbol};
     }
 
     void permit_account (name account)
@@ -897,7 +895,8 @@ CONTRACT gyftietoken : public contract
 
     asset get_recipient_reward ()
     {
-        return adjust_asset (get_one_gft(), get_usercount_factor());
+        //return adjust_asset (get_one_gft(), get_usercount_factor());
+        return adjust_asset (get_one_gft(), 0.3);
     }
 
     asset get_gyfter_reward (name gyfter)
@@ -906,39 +905,61 @@ CONTRACT gyftietoken : public contract
         asset gyfter_gft_balance = getgftbalance (gyfter);
 
         asset gyft_benefit_amount = one_gyftie_token;
-        float usercount_factor = get_usercount_factor();
+        //float usercount_factor = get_usercount_factor();
 
         // print (" Gyfter GFT Balance: ", gyfter_gft_balance, "\n");
         // print (" user count factor: ", std::to_string(usercount_factor), "\n");
 
-        asset adjusted_one_gft = adjust_asset (one_gyftie_token, usercount_factor);
+        //asset adjusted_one_gft = adjust_asset (one_gyftie_token, usercount_factor);
         // print (" Adjusted 1 GFT: ", adjusted_one_gft, "\n");
 
-        if (gyfter_gft_balance  <= (adjusted_one_gft * 3)) {
-            gyft_benefit_amount = adjusted_one_gft * 3;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 10 )) {
-            gyft_benefit_amount = adjusted_one_gft * 4;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 20)) {
-            gyft_benefit_amount = adjusted_one_gft * 5;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 50)) {
-            gyft_benefit_amount = adjusted_one_gft * 6;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 100)) {
-            gyft_benefit_amount = adjusted_one_gft * 7;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 200)) {
-            gyft_benefit_amount = adjusted_one_gft * 8;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 500)) {
-            gyft_benefit_amount = adjusted_one_gft * 9;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 1000)) {
-            gyft_benefit_amount = adjusted_one_gft * 10;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 2000)) {
-            gyft_benefit_amount = adjusted_one_gft * 11;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 5000)) {
-            gyft_benefit_amount = adjusted_one_gft * 12;
-        } else if (gyfter_gft_balance  <= (adjusted_one_gft * 10000)) {
-            gyft_benefit_amount = adjusted_one_gft * 15;
+        if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 0.50000000)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 0.90000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 1.66666667)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 1.200000000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 3.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 1.500000000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 8.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 1.80000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 16.66666667)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 2.10000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 33.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 2.40000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 83.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 2.70000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 166.66666667)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 3.00000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 333.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 3.30000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 833.33333333)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 3.60000000);
+        } else if (gyfter_gft_balance  <= adjust_asset(one_gyftie_token, 1666.66666667)) {
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 4.50000000);
         } else {
-            gyft_benefit_amount = adjusted_one_gft * 20;
+            gyft_benefit_amount = adjust_asset(one_gyftie_token, 6.00000000);
         }
+
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 20)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 5;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 50)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 6;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 100)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 7;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 200)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 8;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 500)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 9;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 1000)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 10;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 2000)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 11;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 5000)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 12;
+        // } else if (gyfter_gft_balance  <= (adjusted_one_gft * 10000)) {
+        //     gyft_benefit_amount = adjusted_one_gft * 15;
+        // } else {
+        //     gyft_benefit_amount = adjusted_one_gft * 20;
+        // }
 
         // print (" Benefit amount: ", gyft_benefit_amount, "\n" );
         return gyft_benefit_amount;
